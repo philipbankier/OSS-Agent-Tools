@@ -1,28 +1,189 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
+import ora from 'ora';
+import { existsSync, readFileSync, writeFileSync, readdirSync, mkdirSync } from 'fs';
+import { join } from 'path';
+import { DriftDetector } from '@tastekit/core/drift';
+import { MemoryConsolidator } from '@tastekit/core/drift';
 
 const driftDetectCommand = new Command('detect')
   .description('Detect drift from traces and feedback')
-  .option('--since <date>', 'Detect drift since date')
+  .option('--since <date>', 'Detect drift since date (ISO format)')
   .option('--skill <id>', 'Detect drift for specific skill')
   .action(async (options) => {
-    console.log(chalk.yellow('Drift detect command not yet implemented'));
-    // TODO: Implement drift detection
+    const workspacePath = process.cwd();
+    const tracesDir = join(workspacePath, '.tastekit', 'traces');
+
+    if (!existsSync(tracesDir)) {
+      console.log(chalk.yellow('No traces found. Run your agent to generate traces first.'));
+      return;
+    }
+
+    const spinner = ora('Analyzing traces for drift...').start();
+
+    try {
+      const detector = new DriftDetector();
+
+      // Collect trace files
+      const traceFiles = readdirSync(tracesDir)
+        .filter(f => f.endsWith('.jsonl'))
+        .map(f => join(tracesDir, f));
+
+      if (traceFiles.length === 0) {
+        spinner.info(chalk.yellow('No trace files found.'));
+        return;
+      }
+
+      const detectionOptions: any = {};
+      if (options.since) {
+        detectionOptions.since = new Date(options.since);
+      }
+      if (options.skill) {
+        detectionOptions.skillId = options.skill;
+      }
+
+      const proposals = detector.detectFromTraces(traceFiles, detectionOptions);
+
+      if (proposals.length === 0) {
+        spinner.succeed(chalk.green('No drift detected.'));
+        return;
+      }
+
+      spinner.succeed(chalk.yellow(`Found ${proposals.length} drift proposal(s)`));
+
+      // Save proposals
+      const proposalsDir = join(workspacePath, '.tastekit', 'proposals');
+      mkdirSync(proposalsDir, { recursive: true });
+
+      for (const proposal of proposals) {
+        const proposalPath = join(proposalsDir, `${proposal.proposal_id}.json`);
+        writeFileSync(proposalPath, JSON.stringify(proposal, null, 2), 'utf-8');
+      }
+
+      // Display proposals
+      console.log('');
+      for (const proposal of proposals) {
+        const riskColor = proposal.risk_rating === 'high' ? chalk.red
+          : proposal.risk_rating === 'medium' ? chalk.yellow
+          : chalk.green;
+
+        console.log(chalk.bold(`  ${proposal.proposal_id}`));
+        console.log(`    Signal: ${proposal.signal_type} (${proposal.frequency}x)`);
+        console.log(`    Risk: ${riskColor(proposal.risk_rating)}`);
+        console.log(`    ${proposal.rationale}`);
+        console.log('');
+      }
+
+      console.log(chalk.cyan('Run'), chalk.bold('tastekit drift apply <proposal_id>'), chalk.cyan('to apply a proposal.'));
+    } catch (err: any) {
+      spinner.fail(chalk.red(`Drift detection failed: ${err.message}`));
+      process.exit(1);
+    }
   });
 
 const driftApplyCommand = new Command('apply')
   .description('Apply a drift proposal')
   .argument('<proposal_id>', 'Proposal ID to apply')
   .action(async (proposalId: string) => {
-    console.log(chalk.yellow('Drift apply command not yet implemented'));
-    // TODO: Implement drift application
+    const workspacePath = process.cwd();
+    const proposalPath = join(workspacePath, '.tastekit', 'proposals', `${proposalId}.json`);
+
+    if (!existsSync(proposalPath)) {
+      console.error(chalk.red(`Proposal not found: ${proposalId}`));
+      console.log(chalk.cyan('Run'), chalk.bold('tastekit drift detect'), chalk.cyan('to find proposals.'));
+      process.exit(1);
+    }
+
+    const spinner = ora(`Applying proposal ${proposalId}...`).start();
+
+    try {
+      const proposal = JSON.parse(readFileSync(proposalPath, 'utf-8'));
+
+      // Apply changes to constitution
+      const constitutionPath = join(workspacePath, '.tastekit', 'artifacts', 'constitution.v1.json');
+      if (existsSync(constitutionPath) && proposal.proposed_changes.constitution) {
+        const constitution = JSON.parse(readFileSync(constitutionPath, 'utf-8'));
+
+        if (proposal.proposed_changes.constitution.add_principle) {
+          constitution.principles.push(proposal.proposed_changes.constitution.add_principle);
+        }
+
+        writeFileSync(constitutionPath, JSON.stringify(constitution, null, 2), 'utf-8');
+      }
+
+      // Mark proposal as applied
+      proposal.applied_at = new Date().toISOString();
+      writeFileSync(proposalPath, JSON.stringify(proposal, null, 2), 'utf-8');
+
+      spinner.succeed(chalk.green(`Applied proposal: ${proposalId}`));
+      console.log(chalk.cyan('\nRun'), chalk.bold('tastekit compile'), chalk.cyan('to recompile artifacts.'));
+    } catch (err: any) {
+      spinner.fail(chalk.red(`Failed to apply proposal: ${err.message}`));
+      process.exit(1);
+    }
   });
 
 const memoryConsolidateCommand = new Command('consolidate')
-  .description('Consolidate memory')
-  .action(async () => {
-    console.log(chalk.yellow('Memory consolidate command not yet implemented'));
-    // TODO: Implement memory consolidation
+  .description('Consolidate memory (prune old, merge similar)')
+  .option('--retention <days>', 'Retention period in days', '30')
+  .action(async (options) => {
+    const workspacePath = process.cwd();
+    const memoryDir = join(workspacePath, '.tastekit', 'memory');
+
+    if (!existsSync(memoryDir)) {
+      console.log(chalk.yellow('No memory directory found.'));
+      return;
+    }
+
+    const spinner = ora('Consolidating memory...').start();
+
+    try {
+      // Read memory entries
+      const memoryFiles = existsSync(memoryDir)
+        ? readdirSync(memoryDir).filter(f => f.endsWith('.json'))
+        : [];
+
+      if (memoryFiles.length === 0) {
+        spinner.info(chalk.yellow('No memory entries to consolidate.'));
+        return;
+      }
+
+      const memories = memoryFiles.map(f => {
+        const content = JSON.parse(readFileSync(join(memoryDir, f), 'utf-8'));
+        return {
+          id: f.replace('.json', ''),
+          content: content.content || JSON.stringify(content),
+          salience: content.salience || 0.5,
+          timestamp: content.timestamp || new Date().toISOString(),
+        };
+      });
+
+      const consolidator = new MemoryConsolidator();
+      const plan = consolidator.generateConsolidationPlan(memories, parseInt(options.retention));
+
+      spinner.succeed(chalk.green('Consolidation plan generated'));
+      console.log('');
+      console.log(chalk.bold('  Plan:'));
+      console.log(`    Keep: ${plan.memories_to_keep.length} memories`);
+      console.log(`    Prune: ${plan.memories_to_prune.length} memories`);
+      console.log(`    Merge: ${plan.memories_to_merge.length} groups`);
+
+      if (plan.memories_to_merge.length > 0) {
+        console.log('');
+        console.log(chalk.bold('  Merges:'));
+        for (const merge of plan.memories_to_merge) {
+          console.log(`    ${merge.source_ids.join(' + ')} -> merged`);
+        }
+      }
+
+      // Save plan
+      const planPath = join(workspacePath, '.tastekit', 'consolidation-plan.json');
+      writeFileSync(planPath, JSON.stringify(plan, null, 2), 'utf-8');
+      console.log(chalk.gray(`\n  Plan saved to: ${planPath}`));
+    } catch (err: any) {
+      spinner.fail(chalk.red(`Consolidation failed: ${err.message}`));
+      process.exit(1);
+    }
   });
 
 export const driftCommand = new Command('drift')
@@ -30,5 +191,4 @@ export const driftCommand = new Command('drift')
   .addCommand(driftDetectCommand)
   .addCommand(driftApplyCommand);
 
-// Add memory consolidate as a separate command in the drift namespace
 driftCommand.addCommand(memoryConsolidateCommand.name('memory-consolidate'));
