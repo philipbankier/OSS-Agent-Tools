@@ -1,10 +1,18 @@
 # Project Roadmap & Status
 
-Last updated: 2026-02-15
+Last updated: 2026-02-16
+
+This roadmap has two parallel tracks:
+- **Track A**: TasteKit + AutoClaw (taste compiler → agent runtime)
+- **Track B**: autoManage (management dashboard for agent oversight)
+
+Track B depends only on Track A Phase 1 (complete). It can proceed independently.
 
 ---
 
-## Phase 1: Make TasteKit Functional (CURRENT)
+# Track A: TasteKit + AutoClaw
+
+## Phase 1: Make TasteKit Functional (COMPLETE)
 
 Goal: Every CLI command works end-to-end. A user can init, onboard, compile, export, and manage drift.
 
@@ -169,3 +177,72 @@ These are ideas worth tracking but not committed to any phase:
 - [ ] Enterprise features (RBAC, SSO, compliance)
 - [ ] Trademark verification for "TasteKit" name
 - [ ] Naming decision for AutoClaw (avoid "Claw")
+- [ ] Trace file pruning (`tastekit traces prune` CLI command)
+- [ ] Approval timeout in guardrails schema (`timeout_seconds` field)
+- [ ] TracerStream decorator for EventEmitter-based streaming (v1.1 autoManage integration)
+
+---
+
+# Track B: autoManage (Management Dashboard)
+
+Parallel track. Depends only on Track A Phase 1 (complete). See `autoManage/Planning/` for full design docs.
+
+---
+
+## B.1: File-Watching Dashboard
+
+Goal: A working dashboard that monitors local TasteKit agents in real-time by watching trace files.
+
+- [ ] Next.js project scaffold (TypeScript, Tailwind, SQLite)
+- [ ] SQLite schema (agents, recent_events tables)
+- [ ] chokidar file watcher for `.tastekit/traces/` directories
+- [ ] Trace parser using TasteKit's `TraceReader`
+- [ ] Status deriver (trace events → agent status: idle/running/blocked/error/completed)
+- [ ] Agent cards grid with real-time updates via SSE
+- [ ] Basic trace viewer (click card → event list with filters)
+- [ ] Approval queue display (read-only)
+- [ ] Status bar with agent counts and alerts
+- [ ] Configuration: watched directories, alert thresholds
+- [ ] Dark mode UI
+
+---
+
+## B.2: Suggestions & Approvals
+
+Goal: Dashboard proactively surfaces problems and suggests interventions.
+
+- [ ] Rule-based suggestion engine (stuck detection, loop detection, error rate, long-running approvals)
+- [ ] Suggestions panel in dashboard with dismiss/acknowledge actions
+- [ ] Suggestion history
+- [ ] Alert notifications for critical suggestions (optional, configurable)
+- [ ] Recent events cleanup job (configurable retention)
+
+---
+
+## B.3: WebSocket + Remote Agents
+
+Goal: Remote agents can stream to autoManage. Bidirectional commands work.
+
+- [ ] WebSocket server alongside Next.js app
+- [ ] Agent reporter library (TypeScript, npm package)
+- [ ] Protocol schemas in `autoManage/src/protocol/` (Zod)
+- [ ] AgentStatusReport messages (doubles as heartbeat)
+- [ ] ManagementCommand messages (pause/resume/stop/approve/deny)
+- [ ] Token-based authentication for remote connections
+- [ ] Connection management (reconnect with exponential backoff + jitter)
+- [ ] Dashboard shows connection type per agent (file-watch vs WebSocket)
+- [ ] Optional TracerStream wrapper for TasteKit (decorator pattern)
+- [ ] Actionable approval queue (send approve/deny commands)
+
+---
+
+## B.4: Management Agent
+
+Goal: AI-powered agent oversight. Operator manages agents through conversation.
+
+- [ ] Built-in AI agent that monitors other agents
+- [ ] Natural language interface ("what's agent-3 working on?", "restart the research bot")
+- [ ] TasteKit taste profile for management style preferences
+- [ ] AI-powered suggestion quality (beyond rule-based)
+- [ ] OverseerSuggestion schema (designed from implementation)
+- [ ] Chat panel in dashboard
