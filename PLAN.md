@@ -45,13 +45,13 @@ Goal: Every CLI command works end-to-end. A user can init, onboard, compile, exp
 ### 1.3 Interop Formats
 - [x] SOUL.md import (convert OpenClaw SOUL.md/IDENTITY.md into TasteKit constitution)
 - [x] AGENTS.md export (generate AGENTS.md from TasteKit artifacts)
-- [ ] Agent File (.af) import/export (Letta format - lower priority)
+- [x] Agent File (.af) import/export (Letta format v2 — persona/soul blocks ↔ constitution)
 
 ### 1.4 Quality
-- [ ] Add test suite for schemas (pure function validation)
-- [ ] Add test suite for compiler
-- [ ] Add test suite for drift detection
-- [ ] Add test suite for eval judge
+- [x] Add test suite for schemas (pure function validation) — 30 tests
+- [x] Add test suite for compiler (constitution, guardrails, memory) — 20 tests
+- [x] Add test suite for drift detection (consolidator: retention, merge, edge cases) — 11 tests
+- [x] Add test suite for eval judge (deterministic, regex, schema, LLM mock) — 16 tests
 - [ ] CI pipeline runs tests on PR
 
 ---

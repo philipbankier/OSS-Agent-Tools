@@ -5,13 +5,13 @@ import { existsSync, readFileSync, mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
 
 export const importCommand = new Command('import')
-  .description('Import from runtime format or SOUL.md files')
-  .option('--target <adapter>', 'Source format: claude-code, manus, openclaw, autopilots, soul-md')
+  .description('Import from runtime format, SOUL.md, or Agent File (.af)')
+  .option('--target <adapter>', 'Source format: claude-code, manus, openclaw, autopilots, soul-md, agent-file')
   .option('--source <path>', 'Source path or directory')
   .action(async (options) => {
     if (!options.target) {
       console.error(chalk.red('Please specify a source format with --target'));
-      console.log(chalk.gray('Available: claude-code, manus, openclaw, autopilots, soul-md'));
+      console.log(chalk.gray('Available: claude-code, manus, openclaw, autopilots, soul-md, agent-file'));
       process.exit(1);
     }
 
@@ -25,8 +25,13 @@ export const importCommand = new Command('import')
       return;
     }
 
+    if (options.target === 'agent-file') {
+      await importAgentFile(options.source);
+      return;
+    }
+
     console.log(chalk.yellow(`Import from ${options.target} adapter format not yet implemented.`));
-    console.log(chalk.cyan('Use --target soul-md to import from OpenClaw SOUL.md/IDENTITY.md files.'));
+    console.log(chalk.cyan('Use --target soul-md or --target agent-file to import.'));
   });
 
 /**
@@ -113,6 +118,172 @@ function parseMdSections(content: string): Record<string, string> {
   }
 
   return sections;
+}
+
+/**
+ * Import from Letta Agent File (.af) format into TasteKit constitution.
+ *
+ * Extracts persona/soul/preferences blocks and agent system prompt.
+ * Ignores runtime state (messages, llm_config, tools).
+ */
+async function importAgentFile(sourcePath: string): Promise<void> {
+  const spinner = ora('Importing from Agent File (.af)...').start();
+
+  try {
+    if (!existsSync(sourcePath)) {
+      spinner.fail(chalk.red(`File not found: ${sourcePath}`));
+      process.exit(1);
+    }
+
+    const raw = readFileSync(sourcePath, 'utf-8');
+    const af = JSON.parse(raw);
+
+    // Support both v2 (top-level arrays) and v1 (flat agent) formats
+    const agents = af.agents || (af.agent_type ? [af] : []);
+    const blocks = af.blocks || [];
+
+    if (agents.length === 0) {
+      spinner.fail(chalk.red('No agents found in the .af file'));
+      process.exit(1);
+    }
+
+    const agent = agents[0];
+
+    // Resolve blocks referenced by the agent
+    const agentBlockIds = new Set(agent.block_ids || []);
+    const agentBlocks: Array<{ label: string; value: string; read_only?: boolean }> =
+      blocks.filter((b: any) => agentBlockIds.has(b.id));
+
+    // If no block_ids, try inline blocks or use all blocks
+    if (agentBlocks.length === 0 && blocks.length > 0) {
+      agentBlocks.push(...blocks);
+    }
+
+    const constitution = buildConstitutionFromAgentFile(agent, agentBlocks);
+
+    // Write to .tastekit/artifacts/
+    const tastekitDir = join(process.cwd(), '.tastekit');
+    const artifactsDir = join(tastekitDir, 'artifacts');
+    mkdirSync(artifactsDir, { recursive: true });
+
+    writeFileSync(
+      join(artifactsDir, 'constitution.v1.json'),
+      JSON.stringify(constitution, null, 2),
+      'utf-8'
+    );
+
+    spinner.succeed(chalk.green('Imported Agent File (.af) into TasteKit constitution'));
+    console.log(chalk.cyan('\nImported from:'));
+    console.log(chalk.gray(`  Agent File: ${sourcePath}`));
+    console.log(chalk.gray(`  Agent: ${agent.name || 'unnamed'}`));
+    console.log(chalk.gray(`  Blocks found: ${agentBlocks.length}`));
+    console.log(chalk.cyan('\nArtifact written to:'));
+    console.log(chalk.gray(`  ${join(artifactsDir, 'constitution.v1.json')}`));
+    console.log(chalk.cyan('\nRun'), chalk.bold('tastekit compile'), chalk.cyan('to generate remaining artifacts.'));
+  } catch (err: any) {
+    spinner.fail(chalk.red(`Import failed: ${err.message}`));
+    process.exit(1);
+  }
+}
+
+function buildConstitutionFromAgentFile(
+  agent: any,
+  blocks: Array<{ label: string; value: string; read_only?: boolean }>
+): any {
+  const principles: any[] = [];
+  let priority = 1;
+
+  // Extract personality from persona/soul blocks
+  const personalityBlocks = ['persona', 'soul', 'custom_instructions'];
+  for (const block of blocks) {
+    if (personalityBlocks.includes(block.label)) {
+      const bullets = block.value.split('\n')
+        .filter(l => l.trim().startsWith('-') || l.trim().startsWith('*'))
+        .map(l => l.replace(/^[\s*-]+/, '').trim())
+        .filter(l => l.length > 0);
+
+      if (bullets.length > 0) {
+        for (const bullet of bullets) {
+          principles.push({
+            id: `af_${block.label}_${priority}`,
+            statement: bullet,
+            priority: priority++,
+            applies_to: ['*'],
+          });
+        }
+      } else if (block.value.trim().length > 0) {
+        // Treat the whole block as a principle
+        for (const line of block.value.split('\n').filter(l => l.trim().length > 0)) {
+          principles.push({
+            id: `af_${block.label}_${priority}`,
+            statement: line.trim(),
+            priority: priority++,
+            applies_to: ['*'],
+          });
+        }
+      }
+    }
+  }
+
+  // Extract from system prompt if no blocks yielded principles
+  if (principles.length === 0 && agent.system) {
+    const lines = agent.system.split('\n')
+      .filter((l: string) => l.trim().length > 10)
+      .slice(0, 10);
+    for (const line of lines) {
+      principles.push({
+        id: `af_system_${priority}`,
+        statement: line.trim(),
+        priority: priority++,
+        applies_to: ['*'],
+      });
+    }
+  }
+
+  // Extract voice keywords from personality-related blocks
+  const voiceKeywords: string[] = [];
+  const preferenceBlocks = ['preferences', 'conversation_patterns'];
+  for (const block of blocks) {
+    if (preferenceBlocks.includes(block.label)) {
+      const words = block.value.split(/[,\n]/)
+        .map(w => w.replace(/^[\s*-]+/, '').trim())
+        .filter(w => w.length > 0 && w.length < 30);
+      voiceKeywords.push(...words.slice(0, 5));
+    }
+  }
+
+  // Check for read-only blocks that might be constraints
+  const forbiddenPhrases: string[] = [];
+  for (const block of blocks) {
+    if (block.read_only && block.label !== 'persona') {
+      const lines = block.value.split('\n')
+        .filter(l => l.trim().startsWith('-') || l.trim().startsWith('*'))
+        .map(l => l.replace(/^[\s*-]+/, '').trim())
+        .filter(l => l.length > 0 && (l.toLowerCase().includes('never') || l.toLowerCase().includes('avoid') || l.toLowerCase().includes("don't")));
+      forbiddenPhrases.push(...lines.slice(0, 5));
+    }
+  }
+
+  return {
+    schema_version: 'constitution.v1',
+    generator_version: '0.5.0',
+    principles: principles.slice(0, 20),
+    tone: {
+      voice_keywords: voiceKeywords.slice(0, 10),
+      forbidden_phrases: forbiddenPhrases.slice(0, 10),
+    },
+    tradeoffs: {
+      autonomy_level: 'medium',
+    },
+    evidence_policy: {
+      require_citations_for: [],
+    },
+    taboos: forbiddenPhrases.slice(0, 5),
+    imported_from: 'agent-file',
+    imported_at: new Date().toISOString(),
+    agent_name: agent.name || undefined,
+    agent_description: agent.description || undefined,
+  };
 }
 
 function buildConstitutionFromSoul(
