@@ -1,4 +1,4 @@
-'''# TasteKit Artifact Schemas
+# TasteKit Artifact Schemas
 
 All data in TasteKit is defined by a set of versioned, machine-readable schemas. These schemas are the canonical source of truth for agent behavior and ensure that artifacts are portable and interoperable across different runtimes. All artifacts are stored in either JSON or YAML format.
 
@@ -64,4 +64,3 @@ Evaluation packs, stored in `.tastekit/artifacts/evalpacks/`, contain a set of s
 ### `trace_event.v1.jsonl`
 
 Trace files are stored in `.tastekit/traces/` as JSONL files (one JSON object per line). Each line is a `trace_event.v1` object that records a single event in the agent's lifecycle, such as a tool call, an approval request, or an error.
-'''

@@ -1,4 +1,4 @@
-'''# TasteKit Overview
+# TasteKit Overview
 
 TasteKit is an open-source command-line interface (CLI) and library designed to capture and compile a user's "taste" into portable, versioned artifacts. It provides a comprehensive framework for managing agent behavior, including a Skills library with progressive disclosure, tool binding via the Model Context Protocol (MCP), trust and provenance enforcement, trace-first logging, and continuous drift maintenance.
 
@@ -42,4 +42,3 @@ A typical TasteKit workflow involves the following steps:
 7.  **Maintain**: The user periodically runs `tastekit drift detect` to analyze traces and identify potential drift, applying proposals to keep the agent aligned.
 
 This structured, artifact-centric approach makes agent behavior more transparent, manageable, and secure over the long term.
-'''

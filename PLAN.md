@@ -87,15 +87,18 @@ Goal: TasteKit is usable by real users as a standalone tool.
 
 ### 2.3 Developer Experience
 - [x] LLM-driven onboarding interview (replaces basic inquirer wizard)
-- [ ] Rich CLI output with formatting and colors
-- [ ] Better error messages with actionable suggestions
-- [ ] Tab completion for CLI commands
+- [x] Rich CLI output with formatting and colors (shared ui.ts module, table formatting)
+- [x] Better error messages with actionable suggestions (unified handleError, hint system)
+- [x] Tab completion for CLI commands (bash/zsh/fish via `tastekit completion`)
 
 ### 2.4 Documentation
-- [ ] Update README with working examples
-- [ ] Quick-start tutorial (init -> onboard -> compile -> export)
+- [x] Update README with working examples (CLI commands table, artifact tree, domain table)
+- [x] Quick-start tutorial (init -> onboard -> compile -> export, updated for LLM interview)
 - [ ] Video walkthrough
-- [ ] Adapter-specific guides (how to use with Claude Code, OpenClaw, etc.)
+- [x] Adapter-specific guides (docs/adapters/ — Claude Code, Manus, OpenClaw, Autopilots)
+- [x] Fix docs formatting (remove triple-quote wrapping from 6 docs files)
+- [x] Update domains.md (all 5 domains fully implemented, not stubs)
+- [x] Flesh out example projects (minimal-agent, content-agent, newsletter-agent)
 
 ### 2.5 Release
 - [ ] npm publish @tastekit/core and @tastekit/cli

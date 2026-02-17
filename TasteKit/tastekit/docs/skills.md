@@ -1,4 +1,4 @@
-'''# Agent Skills
+# Agent Skills
 
 In TasteKit, a **Skill** is a modular, reusable capability that an agent can use to perform a specific task. Skills are designed to be self-contained and portable, with a strong emphasis on **progressive disclosure** to keep the agent's initial context small and efficient.
 
@@ -45,4 +45,3 @@ TasteKit provides a set of CLI commands for managing your skills library:
 -   `tastekit skills list`: Lists all the skills available in your workspace.
 -   `tastekit skills lint`: Validates the structure of your `SKILL.md` files to ensure they comply with the progressive disclosure contract.
 -   `tastekit skills pack`: Packages your skills library into a portable format (`zip` or `dir`) that can be shared or deployed to a runtime like Manus.
-'''
