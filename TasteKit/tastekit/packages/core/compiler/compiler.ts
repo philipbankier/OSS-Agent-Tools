@@ -5,6 +5,8 @@ import { stringifyYAML } from '../utils/yaml.js';
 import { compileConstitution } from './constitution-compiler.js';
 import { compileGuardrails } from './guardrails-compiler.js';
 import { compileMemoryPolicy } from './memory-compiler.js';
+import { compileSkills } from './skills-compiler.js';
+import { compilePlaybooks } from './playbook-compiler.js';
 
 /**
  * Main compiler orchestrator
@@ -46,9 +48,22 @@ export async function compile(options: CompilationOptions): Promise<CompilationR
     atomicWrite(memoryPath, stringifyYAML(memory));
     artifacts.push('memory.v1.yaml');
     
-    // TODO: Compile skills library
-    // TODO: Generate playbooks
-    
+    // Compile skills library
+    const skillArtifacts = await compileSkills({
+      workspacePath,
+      session,
+      constitution,
+    });
+    artifacts.push(...skillArtifacts);
+
+    // Generate playbooks
+    const playbookArtifacts = await compilePlaybooks({
+      workspacePath,
+      session,
+      constitution,
+    });
+    artifacts.push(...playbookArtifacts);
+
     return {
       success: true,
       artifacts,

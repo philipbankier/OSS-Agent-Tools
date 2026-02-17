@@ -81,8 +81,8 @@ Goal: TasteKit is usable by real users as a standalone tool.
 - [x] Content agent domain (rubric complete)
 
 ### 2.2 Compiler Completions
-- [ ] Skills library compilation (compiler.ts TODO)
-- [ ] Playbook generation (compiler.ts TODO)
+- [x] Skills library compilation (domain-aware skills compiler with SKILL.md + manifest generation)
+- [x] Playbook generation (domain-specific playbooks: simple-post, research-and-post, content-calendar)
 - [x] Rich constitution generation (structured answers path with rationale, examples, evidence, taboos)
 
 ### 2.3 Developer Experience
