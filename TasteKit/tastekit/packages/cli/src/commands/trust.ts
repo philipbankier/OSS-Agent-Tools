@@ -5,6 +5,7 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { TrustManager, TrustAuditor } from '@tastekit/core/trust';
 import { TrustV1 } from '@tastekit/core/schemas';
+import { getGlobalOptions, detail, hint, table, handleError, jsonOutput } from '../ui.js';
 
 const DEFAULT_TRUST_POLICY: TrustV1 = {
   schema_version: 'trust.v1',
@@ -47,11 +48,10 @@ const trustInitCommand = new Command('init')
 
       saveTrustPolicy(DEFAULT_TRUST_POLICY);
       spinner.succeed(chalk.green('Trust policy initialized'));
-      console.log(chalk.gray(`  Written to: ${trustPath}`));
-      console.log(chalk.cyan('\nUse'), chalk.bold('tastekit trust pin-mcp'), chalk.cyan('to pin MCP servers.'));
-    } catch (error: any) {
-      spinner.fail(chalk.red(`Failed to initialize trust policy: ${error.message}`));
-      process.exit(1);
+      detail('Written to', trustPath);
+      hint('tastekit trust pin-mcp', 'pin MCP servers');
+    } catch (error) {
+      handleError(error, spinner);
     }
   });
 
@@ -63,7 +63,7 @@ const trustPinMcpCommand = new Command('pin-mcp')
   .action(async (serverUrl: string, options) => {
     if (!options.fingerprint) {
       console.error(chalk.red('Please specify a fingerprint with --fingerprint'));
-      console.log(chalk.cyan('Use'), chalk.bold('tastekit mcp inspect <server>'), chalk.cyan('to get the fingerprint.'));
+      hint('tastekit mcp inspect <server>', 'get the fingerprint');
       process.exit(1);
     }
 
@@ -75,11 +75,10 @@ const trustPinMcpCommand = new Command('pin-mcp')
       saveTrustPolicy(manager.getPolicy());
 
       spinner.succeed(chalk.green(`Pinned: ${serverUrl}`));
-      console.log(chalk.gray(`  Fingerprint: ${options.fingerprint}`));
-      console.log(chalk.gray(`  Mode: ${options.mode}`));
-    } catch (error: any) {
-      spinner.fail(chalk.red(`Failed to pin server: ${error.message}`));
-      process.exit(1);
+      detail('Fingerprint', options.fingerprint);
+      detail('Mode', options.mode);
+    } catch (error) {
+      handleError(error, spinner);
     }
   });
 
@@ -106,17 +105,17 @@ const trustPinSkillCommand = new Command('pin-skill-source')
       saveTrustPolicy(manager.getPolicy());
 
       spinner.succeed(chalk.green(`Pinned: ${pathOrUrl}`));
-      console.log(chalk.gray(`  Type: ${isGit ? 'git' : 'local'}`));
-      console.log(chalk.gray(`  ${isGit ? 'Commit' : 'Hash'}: ${hash}`));
-    } catch (error: any) {
-      spinner.fail(chalk.red(`Failed to pin source: ${error.message}`));
-      process.exit(1);
+      detail('Type', isGit ? 'git' : 'local');
+      detail(isGit ? 'Commit' : 'Hash', hash);
+    } catch (error) {
+      handleError(error, spinner);
     }
   });
 
 const trustAuditCommand = new Command('audit')
   .description('Audit trust policy and flag violations')
-  .action(async () => {
+  .action(async (_options, cmd) => {
+    const globals = getGlobalOptions(cmd);
     const spinner = ora('Auditing trust policy...').start();
 
     try {
@@ -146,20 +145,38 @@ const trustAuditCommand = new Command('audit')
         spinner.fail(chalk.red(`Audit failed with ${report.violations.length} violation(s)`));
       }
 
-      if (report.violations.length > 0) {
-        console.log('');
-        for (const v of report.violations) {
-          const icon = v.severity === 'error' ? chalk.red('ERROR') : chalk.yellow('WARN');
-          console.log(`  ${icon} [${v.type}] ${v.message}`);
-        }
+      if (globals.json) {
+        jsonOutput({
+          passed: report.passed,
+          violations: report.violations,
+          pinned_mcp_servers: trust.mcp_servers?.length || 0,
+          pinned_skill_sources: trust.skill_sources?.length || 0,
+          auto_updates: trust.update_policy?.allow_auto_updates || false,
+        });
       }
 
-      console.log(chalk.gray(`\n  Pinned MCP servers: ${trust.mcp_servers?.length || 0}`));
-      console.log(chalk.gray(`  Pinned skill sources: ${trust.skill_sources?.length || 0}`));
-      console.log(chalk.gray(`  Auto-updates: ${trust.update_policy?.allow_auto_updates ? 'enabled' : 'disabled'}`));
-    } catch (error: any) {
-      spinner.fail(chalk.red(`Audit failed: ${error.message}`));
-      process.exit(1);
+      if (report.violations.length > 0) {
+        console.log('');
+        table(
+          [
+            { label: 'Severity', width: 10 },
+            { label: 'Type', width: 20 },
+            { label: 'Message', width: 50 },
+          ],
+          report.violations.map((v: any) => [
+            v.severity === 'error' ? chalk.red('ERROR') : chalk.yellow('WARN'),
+            v.type,
+            v.message,
+          ]),
+        );
+      }
+
+      console.log('');
+      detail('Pinned MCP servers', String(trust.mcp_servers?.length || 0));
+      detail('Pinned skill sources', String(trust.skill_sources?.length || 0));
+      detail('Auto-updates', trust.update_policy?.allow_auto_updates ? 'enabled' : 'disabled');
+    } catch (error) {
+      handleError(error, spinner);
     }
   });
 

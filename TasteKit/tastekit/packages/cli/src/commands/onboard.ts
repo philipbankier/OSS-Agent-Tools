@@ -1,4 +1,4 @@
-import { Command } from 'commander';
+import { Command, createOption } from 'commander';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import inquirer from 'inquirer';
@@ -11,10 +11,11 @@ import { resolveProvider, autoDetectProvider } from '@tastekit/core/llm/resolve.
 import { getDomainRubric } from '@tastekit/core/domains/index.js';
 import { DomainRubric } from '@tastekit/core/interview/rubric.js';
 import { WorkspaceConfig, InterviewState } from '@tastekit/core/schemas/workspace.js';
+import { detail, hint, handleError } from '../ui.js';
 
 export const onboardCommand = new Command('onboard')
   .description('Run the LLM-driven onboarding interview')
-  .option('--depth <type>', 'Override depth: quick, guided, or operator')
+  .addOption(createOption('--depth <type>', 'Override depth').choices(['quick', 'guided', 'operator']))
   .option('--resume', 'Resume from previous session')
   .option('--provider <name>', 'Override LLM provider: anthropic, openai, ollama')
   .action(async (options) => {
@@ -126,18 +127,13 @@ export const onboardCommand = new Command('onboard')
       const skipped = state.dimension_coverage.filter(d => d.status === 'skipped').length;
 
       console.log(chalk.bold.green('\nOnboarding complete!'));
-      console.log(chalk.gray(`  Dimensions covered: ${covered}/${total}${skipped > 0 ? ` (${skipped} skipped)` : ''}`));
-      console.log(chalk.gray(`  Principles extracted: ${structuredAnswers.principles?.length ?? 0}`));
-      console.log(chalk.gray('  Session saved to .tastekit/session.json'));
-      console.log('\nNext: run ' + chalk.bold('tastekit compile') + ' to generate your taste artifacts.');
+      detail('Dimensions covered', `${covered}/${total}${skipped > 0 ? ` (${skipped} skipped)` : ''}`);
+      detail('Principles extracted', String(structuredAnswers.principles?.length ?? 0));
+      detail('Session saved to', '.tastekit/session.json');
+      console.log('');
+      hint('tastekit compile', 'generate your taste artifacts');
 
     } catch (error) {
-      spinner.fail(chalk.red('Onboarding failed'));
-      if (error instanceof Error) {
-        console.error(chalk.red(error.message));
-      } else {
-        console.error(error);
-      }
-      process.exit(1);
+      handleError(error, spinner);
     }
   });

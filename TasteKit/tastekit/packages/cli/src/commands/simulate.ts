@@ -6,7 +6,7 @@ export const simulateCommand = new Command('simulate')
   .option('--skill <id>', 'Skill to simulate')
   .option('--playbook <id>', 'Playbook to simulate')
   .option('--no-side-effects', 'Disable side effects')
-  .action(async (options) => {
-    console.log(chalk.yellow('Simulate command not yet implemented'));
-    // TODO: Implement simulation
+  .action(async () => {
+    console.error(chalk.yellow('Simulate command not yet implemented.'));
+    process.exit(1);
   });

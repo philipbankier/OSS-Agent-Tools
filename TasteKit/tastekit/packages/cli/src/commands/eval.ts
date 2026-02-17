@@ -5,12 +5,14 @@ import { existsSync, readFileSync, readdirSync, writeFileSync, mkdirSync } from 
 import { join } from 'path';
 import { EvalRunner } from '@tastekit/core/eval';
 import { Replay } from '@tastekit/core/eval';
+import { getGlobalOptions, detail, hint, handleError, jsonOutput, verbose } from '../ui.js';
 
 const evalRunCommand = new Command('run')
   .description('Run evaluation pack')
   .option('--pack <path>', 'Path to evaluation pack YAML/JSON file')
   .option('--format <type>', 'Output format: json or summary', 'summary')
-  .action(async (options) => {
+  .action(async (options, cmd) => {
+    const globals = getGlobalOptions(cmd);
     const workspacePath = process.cwd();
 
     // Find eval pack
@@ -28,8 +30,8 @@ const evalRunCommand = new Command('run')
 
     if (!evalPackPath || !existsSync(evalPackPath)) {
       console.error(chalk.red('No evaluation pack found.'));
-      console.log(chalk.cyan('Specify a pack with'), chalk.bold('--pack <path>'));
-      console.log(chalk.cyan('Or place eval packs in'), chalk.bold('.tastekit/evals/'));
+      hint('--pack <path>', 'specify a pack');
+      hint('.tastekit/evals/', 'place eval packs here');
       process.exit(1);
     }
 
@@ -45,13 +47,14 @@ const evalRunCommand = new Command('run')
         evalPack = JSON.parse(content);
       }
 
+      verbose(`Running eval pack: ${evalPack.name}`, globals);
+
       const runner = new EvalRunner();
       const report = await runner.runEvalPack(evalPack);
 
-      if (options.format === 'json') {
+      if (options.format === 'json' || globals.json) {
         spinner.stop();
-        console.log(JSON.stringify(report, null, 2));
-        return;
+        jsonOutput(report);
       }
 
       // Summary format
@@ -76,26 +79,26 @@ const evalRunCommand = new Command('run')
       }
 
       console.log('');
-      console.log(chalk.gray(`  Pack: ${evalPack.name}`));
-      console.log(chalk.gray(`  Scenarios: ${report.results.length}`));
-      console.log(chalk.gray(`  Passed: ${report.results.filter(r => r.passed).length}/${report.results.length}`));
+      detail('Pack', evalPack.name);
+      detail('Scenarios', String(report.results.length));
+      detail('Passed', `${report.results.filter((r: any) => r.passed).length}/${report.results.length}`);
 
       // Save report
       const reportsDir = join(workspacePath, '.tastekit', 'eval-reports');
       mkdirSync(reportsDir, { recursive: true });
       const reportPath = join(reportsDir, `${report.evalpack_id}_${Date.now()}.json`);
       writeFileSync(reportPath, JSON.stringify(report, null, 2), 'utf-8');
-      console.log(chalk.gray(`  Report: ${reportPath}`));
-    } catch (err: any) {
-      spinner.fail(chalk.red(`Evaluation failed: ${err.message}`));
-      process.exit(1);
+      detail('Report', reportPath);
+    } catch (error) {
+      handleError(error, spinner);
     }
   });
 
 const evalReplayCommand = new Command('replay')
   .description('Replay trace against current profile for regression testing')
   .option('--trace <path>', 'Path to trace file (JSONL)')
-  .action(async (options) => {
+  .action(async (options, cmd) => {
+    const globals = getGlobalOptions(cmd);
     const workspacePath = process.cwd();
     const constitutionPath = join(workspacePath, '.tastekit', 'artifacts', 'constitution.v1.json');
 
@@ -121,13 +124,15 @@ const evalReplayCommand = new Command('replay')
 
     if (!tracePath || !existsSync(tracePath)) {
       console.error(chalk.red('No trace file found.'));
-      console.log(chalk.cyan('Specify a trace with'), chalk.bold('--trace <path>'));
+      hint('--trace <path>', 'specify a trace');
       process.exit(1);
     }
 
     const spinner = ora('Replaying trace against current profile...').start();
 
     try {
+      verbose(`Replaying: ${tracePath}`, globals);
+
       const constitution = JSON.parse(readFileSync(constitutionPath, 'utf-8'));
       const replay = new Replay();
       const result = replay.replayTrace(tracePath, constitution);
@@ -143,12 +148,15 @@ const evalReplayCommand = new Command('replay')
         }
       }
 
+      if (globals.json) {
+        jsonOutput(result);
+      }
+
       console.log('');
-      console.log(chalk.gray(`  Trace: ${tracePath}`));
-      console.log(chalk.gray(`  Profile version: ${result.profile_version}`));
-    } catch (err: any) {
-      spinner.fail(chalk.red(`Replay failed: ${err.message}`));
-      process.exit(1);
+      detail('Trace', tracePath);
+      detail('Profile version', result.profile_version);
+    } catch (error) {
+      handleError(error, spinner);
     }
   });
 

@@ -5,12 +5,14 @@ import { existsSync, readFileSync, writeFileSync, readdirSync, mkdirSync } from 
 import { join } from 'path';
 import { DriftDetector } from '@tastekit/core/drift';
 import { MemoryConsolidator } from '@tastekit/core/drift';
+import { getGlobalOptions, riskColor, header, detail, hint, handleError, jsonOutput, verbose } from '../ui.js';
 
 const driftDetectCommand = new Command('detect')
   .description('Detect drift from traces and feedback')
   .option('--since <date>', 'Detect drift since date (ISO format)')
   .option('--skill <id>', 'Detect drift for specific skill')
-  .action(async (options) => {
+  .action(async (options, cmd) => {
+    const globals = getGlobalOptions(cmd);
     const workspacePath = process.cwd();
     const tracesDir = join(workspacePath, '.tastekit', 'traces');
 
@@ -34,6 +36,8 @@ const driftDetectCommand = new Command('detect')
         return;
       }
 
+      verbose(`Found ${traceFiles.length} trace file(s)`, globals);
+
       const detectionOptions: any = {};
       if (options.since) {
         detectionOptions.since = new Date(options.since);
@@ -46,10 +50,11 @@ const driftDetectCommand = new Command('detect')
 
       if (proposals.length === 0) {
         spinner.succeed(chalk.green('No drift detected.'));
+        if (globals.json) jsonOutput({ proposals: [] });
         return;
       }
 
-      spinner.succeed(chalk.yellow(`Found ${proposals.length} drift proposal(s)`));
+      spinner.warn(chalk.yellow(`Found ${proposals.length} drift proposal(s)`));
 
       // Save proposals
       const proposalsDir = join(workspacePath, '.tastekit', 'proposals');
@@ -60,37 +65,37 @@ const driftDetectCommand = new Command('detect')
         writeFileSync(proposalPath, JSON.stringify(proposal, null, 2), 'utf-8');
       }
 
+      if (globals.json) {
+        jsonOutput({ proposals });
+      }
+
       // Display proposals
       console.log('');
       for (const proposal of proposals) {
-        const riskColor = proposal.risk_rating === 'high' ? chalk.red
-          : proposal.risk_rating === 'medium' ? chalk.yellow
-          : chalk.green;
-
         console.log(chalk.bold(`  ${proposal.proposal_id}`));
-        console.log(`    Signal: ${proposal.signal_type} (${proposal.frequency}x)`);
+        detail('Signal', `${proposal.signal_type} (${proposal.frequency}x)`);
         console.log(`    Risk: ${riskColor(proposal.risk_rating)}`);
         console.log(`    ${proposal.rationale}`);
         console.log('');
       }
 
-      console.log(chalk.cyan('Run'), chalk.bold('tastekit drift apply <proposal_id>'), chalk.cyan('to apply a proposal.'));
-    } catch (err: any) {
-      spinner.fail(chalk.red(`Drift detection failed: ${err.message}`));
-      process.exit(1);
+      hint('tastekit drift apply <proposal_id>', 'apply a proposal');
+    } catch (error) {
+      handleError(error, spinner);
     }
   });
 
 const driftApplyCommand = new Command('apply')
   .description('Apply a drift proposal')
   .argument('<proposal_id>', 'Proposal ID to apply')
-  .action(async (proposalId: string) => {
+  .action(async (proposalId: string, _options, cmd) => {
+    const globals = getGlobalOptions(cmd);
     const workspacePath = process.cwd();
     const proposalPath = join(workspacePath, '.tastekit', 'proposals', `${proposalId}.json`);
 
     if (!existsSync(proposalPath)) {
       console.error(chalk.red(`Proposal not found: ${proposalId}`));
-      console.log(chalk.cyan('Run'), chalk.bold('tastekit drift detect'), chalk.cyan('to find proposals.'));
+      hint('tastekit drift detect', 'find proposals');
       process.exit(1);
     }
 
@@ -116,17 +121,22 @@ const driftApplyCommand = new Command('apply')
       writeFileSync(proposalPath, JSON.stringify(proposal, null, 2), 'utf-8');
 
       spinner.succeed(chalk.green(`Applied proposal: ${proposalId}`));
-      console.log(chalk.cyan('\nRun'), chalk.bold('tastekit compile'), chalk.cyan('to recompile artifacts.'));
-    } catch (err: any) {
-      spinner.fail(chalk.red(`Failed to apply proposal: ${err.message}`));
-      process.exit(1);
+
+      if (globals.json) {
+        jsonOutput({ applied: proposalId, applied_at: proposal.applied_at });
+      }
+
+      hint('tastekit compile', 'recompile artifacts');
+    } catch (error) {
+      handleError(error, spinner);
     }
   });
 
 const memoryConsolidateCommand = new Command('consolidate')
   .description('Consolidate memory (prune old, merge similar)')
   .option('--retention <days>', 'Retention period in days', '30')
-  .action(async (options) => {
+  .action(async (options, cmd) => {
+    const globals = getGlobalOptions(cmd);
     const workspacePath = process.cwd();
     const memoryDir = join(workspacePath, '.tastekit', 'memory');
 
@@ -148,6 +158,8 @@ const memoryConsolidateCommand = new Command('consolidate')
         return;
       }
 
+      verbose(`Processing ${memoryFiles.length} memory file(s)`, globals);
+
       const memories = memoryFiles.map(f => {
         const content = JSON.parse(readFileSync(join(memoryDir, f), 'utf-8'));
         return {
@@ -162,11 +174,16 @@ const memoryConsolidateCommand = new Command('consolidate')
       const plan = consolidator.generateConsolidationPlan(memories, parseInt(options.retention));
 
       spinner.succeed(chalk.green('Consolidation plan generated'));
+
+      if (globals.json) {
+        jsonOutput(plan);
+      }
+
       console.log('');
-      console.log(chalk.bold('  Plan:'));
-      console.log(`    Keep: ${plan.memories_to_keep.length} memories`);
-      console.log(`    Prune: ${plan.memories_to_prune.length} memories`);
-      console.log(`    Merge: ${plan.memories_to_merge.length} groups`);
+      header('Plan');
+      detail('Keep', `${plan.memories_to_keep.length} memories`);
+      detail('Prune', `${plan.memories_to_prune.length} memories`);
+      detail('Merge', `${plan.memories_to_merge.length} groups`);
 
       if (plan.memories_to_merge.length > 0) {
         console.log('');
@@ -180,9 +197,8 @@ const memoryConsolidateCommand = new Command('consolidate')
       const planPath = join(workspacePath, '.tastekit', 'consolidation-plan.json');
       writeFileSync(planPath, JSON.stringify(plan, null, 2), 'utf-8');
       console.log(chalk.gray(`\n  Plan saved to: ${planPath}`));
-    } catch (err: any) {
-      spinner.fail(chalk.red(`Consolidation failed: ${err.message}`));
-      process.exit(1);
+    } catch (error) {
+      handleError(error, spinner);
     }
   });
 

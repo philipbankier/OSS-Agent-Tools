@@ -1,12 +1,13 @@
-import { Command } from 'commander';
+import { Command, createOption } from 'commander';
 import chalk from 'chalk';
 import ora from 'ora';
 import { existsSync, readFileSync, mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
+import { detail, hint, handleError } from '../ui.js';
 
 export const importCommand = new Command('import')
   .description('Import from runtime format, SOUL.md, or Agent File (.af)')
-  .option('--target <adapter>', 'Source format: claude-code, manus, openclaw, autopilots, soul-md, agent-file')
+  .addOption(createOption('--target <adapter>', 'Source format').choices(['claude-code', 'manus', 'openclaw', 'autopilots', 'soul-md', 'agent-file']))
   .option('--source <path>', 'Source path or directory')
   .action(async (options) => {
     if (!options.target) {
@@ -30,8 +31,9 @@ export const importCommand = new Command('import')
       return;
     }
 
-    console.log(chalk.yellow(`Import from ${options.target} adapter format not yet implemented.`));
+    console.error(chalk.yellow(`Import from ${options.target} adapter format not yet implemented.`));
     console.log(chalk.cyan('Use --target soul-md or --target agent-file to import.'));
+    process.exit(1);
   });
 
 /**
@@ -80,17 +82,16 @@ async function importSoulMd(sourcePath: string): Promise<void> {
     );
 
     spinner.succeed(chalk.green('Imported SOUL.md into TasteKit constitution'));
-    console.log(chalk.cyan('\nImported from:'));
-    console.log(chalk.gray(`  SOUL.md: ${soulPath}`));
+    console.log('');
+    detail('SOUL.md', soulPath);
     if (identityContent) {
-      console.log(chalk.gray(`  IDENTITY.md: ${identityPath}`));
+      detail('IDENTITY.md', identityPath);
     }
-    console.log(chalk.cyan('\nArtifact written to:'));
-    console.log(chalk.gray(`  ${join(artifactsDir, 'constitution.v1.json')}`));
-    console.log(chalk.cyan('\nRun'), chalk.bold('tastekit compile'), chalk.cyan('to generate remaining artifacts.'));
-  } catch (err: any) {
-    spinner.fail(chalk.red(`Import failed: ${err.message}`));
-    process.exit(1);
+    detail('Artifact', join(artifactsDir, 'constitution.v1.json'));
+    console.log('');
+    hint('tastekit compile', 'generate remaining artifacts');
+  } catch (error) {
+    handleError(error, spinner);
   }
 }
 
@@ -173,16 +174,15 @@ async function importAgentFile(sourcePath: string): Promise<void> {
     );
 
     spinner.succeed(chalk.green('Imported Agent File (.af) into TasteKit constitution'));
-    console.log(chalk.cyan('\nImported from:'));
-    console.log(chalk.gray(`  Agent File: ${sourcePath}`));
-    console.log(chalk.gray(`  Agent: ${agent.name || 'unnamed'}`));
-    console.log(chalk.gray(`  Blocks found: ${agentBlocks.length}`));
-    console.log(chalk.cyan('\nArtifact written to:'));
-    console.log(chalk.gray(`  ${join(artifactsDir, 'constitution.v1.json')}`));
-    console.log(chalk.cyan('\nRun'), chalk.bold('tastekit compile'), chalk.cyan('to generate remaining artifacts.'));
-  } catch (err: any) {
-    spinner.fail(chalk.red(`Import failed: ${err.message}`));
-    process.exit(1);
+    console.log('');
+    detail('Agent File', sourcePath);
+    detail('Agent', agent.name || 'unnamed');
+    detail('Blocks found', String(agentBlocks.length));
+    detail('Artifact', join(artifactsDir, 'constitution.v1.json'));
+    console.log('');
+    hint('tastekit compile', 'generate remaining artifacts');
+  } catch (error) {
+    handleError(error, spinner);
   }
 }
 

@@ -3,6 +3,7 @@ import chalk from 'chalk';
 import ora from 'ora';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
+import { getGlobalOptions, riskColor, header, detail, hint, table, handleError, jsonOutput, verbose } from '../ui.js';
 
 interface MCPServerRegistry {
   servers: Record<string, {
@@ -41,7 +42,8 @@ const mcpAddCommand = new Command('add')
   .option('--name <name>', 'Server name')
   .option('--args <args>', 'Command arguments (comma-separated)')
   .option('--pin', 'Pin server fingerprint after adding')
-  .action(async (serverRef: string, options) => {
+  .action(async (serverRef: string, options, cmd) => {
+    const globals = getGlobalOptions(cmd);
     const spinner = ora(`Adding MCP server: ${serverRef}`).start();
 
     try {
@@ -65,53 +67,72 @@ const mcpAddCommand = new Command('add')
       saveRegistry(registry);
 
       spinner.succeed(chalk.green(`MCP server added: ${name}`));
-      console.log(chalk.gray(`  Transport: ${isUrl ? 'streamable-http' : 'stdio'}`));
-      console.log(chalk.gray(`  Ref: ${serverRef}`));
-      console.log(chalk.cyan('\nRun'), chalk.bold('tastekit mcp inspect ' + name), chalk.cyan('to discover tools.'));
-      console.log(chalk.cyan('Run'), chalk.bold('tastekit mcp bind'), chalk.cyan('to select and bind tools.'));
-    } catch (error: any) {
-      spinner.fail(chalk.red(`Failed to add MCP server: ${error.message}`));
-      process.exit(1);
+
+      if (globals.json) {
+        jsonOutput({ name, transport: isUrl ? 'streamable-http' : 'stdio', ref: serverRef });
+      }
+
+      detail('Transport', isUrl ? 'streamable-http' : 'stdio');
+      detail('Ref', serverRef);
+      console.log('');
+      hint(`tastekit mcp inspect ${name}`, 'discover tools');
+      hint('tastekit mcp bind', 'select and bind tools');
+    } catch (error) {
+      handleError(error, spinner);
     }
   });
 
 const mcpListCommand = new Command('list')
   .description('List configured MCP servers')
-  .action(async () => {
-    console.log(chalk.bold('\nMCP Servers\n'));
-
+  .action(async (_options, cmd) => {
+    const globals = getGlobalOptions(cmd);
     const registry = loadRegistry();
     const servers = Object.values(registry.servers);
 
     if (servers.length === 0) {
+      if (globals.json) jsonOutput({ servers: [] });
       console.log(chalk.gray('No MCP servers configured.'));
-      console.log(chalk.cyan('\nRun'), chalk.bold('tastekit mcp add <command_or_url>'), chalk.cyan('to add a server.'));
+      hint('tastekit mcp add <command_or_url>', 'add a server');
       return;
     }
 
-    for (const server of servers) {
-      const pinIcon = server.pinned ? chalk.green('[pinned]') : chalk.gray('[unpinned]');
-      console.log(`  ${chalk.bold(server.name)} ${pinIcon}`);
-      console.log(`    Transport: ${server.transport || 'stdio'}`);
-      if (server.command) console.log(`    Command: ${server.command} ${(server.args || []).join(' ')}`);
-      if (server.url) console.log(`    URL: ${server.url}`);
-      console.log(`    Added: ${server.added_at}`);
-      console.log('');
+    if (globals.json) {
+      jsonOutput({ servers });
     }
 
-    console.log(chalk.gray(`${servers.length} server(s) configured.`));
+    header('MCP Servers');
+
+    table(
+      [
+        { label: 'Name', width: 20 },
+        { label: 'Transport', width: 16 },
+        { label: 'Ref', width: 30 },
+        { label: 'Pinned', width: 10 },
+        { label: 'Added', width: 20 },
+      ],
+      servers.map(s => [
+        chalk.bold(s.name),
+        s.transport || 'stdio',
+        s.url || s.command || '',
+        s.pinned ? chalk.green('yes') : chalk.gray('no'),
+        s.added_at.split('T')[0],
+      ]),
+    );
+
+    console.log(chalk.gray(`\n  ${servers.length} server(s) configured.`));
   });
 
 const mcpInspectCommand = new Command('inspect')
   .description('Inspect an MCP server (discover tools, resources, prompts)')
   .argument('<server>', 'Server name from registry')
-  .action(async (serverName: string) => {
+  .action(async (serverName: string, _options, cmd) => {
+    const globals = getGlobalOptions(cmd);
     const registry = loadRegistry();
     const serverConfig = registry.servers[serverName];
 
     if (!serverConfig) {
       console.error(chalk.red(`Server not found: ${serverName}`));
-      console.log(chalk.cyan('Run'), chalk.bold('tastekit mcp list'), chalk.cyan('to see configured servers.'));
+      hint('tastekit mcp list', 'see configured servers');
       process.exit(1);
     }
 
@@ -122,6 +143,7 @@ const mcpInspectCommand = new Command('inspect')
       const client = new MCPClient(serverConfig);
 
       await client.connect();
+      verbose(`Connected to ${serverName}`, globals);
       spinner.text = `Discovering capabilities of ${serverName}...`;
 
       const tools = await client.listTools();
@@ -133,18 +155,29 @@ const mcpInspectCommand = new Command('inspect')
 
       spinner.succeed(chalk.green(`Inspected: ${serverName}`));
 
-      console.log(chalk.gray(`  Fingerprint: ${fingerprint}`));
+      if (globals.json) {
+        jsonOutput({ server: serverName, fingerprint, tools, resources, prompts });
+      }
+
+      detail('Fingerprint', fingerprint);
       console.log('');
 
       if (tools.length > 0) {
         console.log(chalk.bold('  Tools:'));
-        for (const tool of tools) {
-          const risk = tool.annotations?.destructive ? chalk.red('[destructive]')
-            : tool.annotations?.risk === 'high' ? chalk.yellow('[high-risk]')
-            : '';
-          console.log(`    ${tool.name} ${risk}`);
-          if (tool.description) console.log(chalk.gray(`      ${tool.description}`));
-        }
+        table(
+          [
+            { label: 'Name', width: 24 },
+            { label: 'Risk', width: 14 },
+            { label: 'Description', width: 40 },
+          ],
+          tools.map((tool: any) => [
+            tool.name,
+            tool.annotations?.destructive ? chalk.red('destructive')
+              : tool.annotations?.risk === 'high' ? chalk.yellow('high')
+              : chalk.green('low'),
+            tool.description || '',
+          ]),
+        );
         console.log('');
       }
 
@@ -167,9 +200,8 @@ const mcpInspectCommand = new Command('inspect')
       if (tools.length === 0 && resources.length === 0 && prompts.length === 0) {
         console.log(chalk.yellow('  No tools, resources, or prompts discovered.'));
       }
-    } catch (error: any) {
-      spinner.fail(chalk.red(`Failed to inspect: ${error.message}`));
-      process.exit(1);
+    } catch (error) {
+      handleError(error, spinner);
     }
   });
 
@@ -177,7 +209,8 @@ const mcpBindCommand = new Command('bind')
   .description('Select and bind tools from MCP servers')
   .option('--server <name>', 'Bind tools from specific server')
   .option('--all', 'Bind all tools from all servers')
-  .action(async (options) => {
+  .action(async (options, cmd) => {
+    const globals = getGlobalOptions(cmd);
     const spinner = ora('Binding MCP tools...').start();
 
     try {
@@ -200,6 +233,7 @@ const mcpBindCommand = new Command('bind')
         const client = new MCPClient(serverConfig);
         try {
           await client.connect();
+          verbose(`Binding tools from ${serverConfig.name}`, globals);
           const { bindings, guardrails } = await binder.bindServer(
             client,
             serverConfig.name,
@@ -209,8 +243,9 @@ const mcpBindCommand = new Command('bind')
           allBindings.push(bindings);
           allGuardrails.push(...guardrails);
           await client.disconnect();
-        } catch (err: any) {
-          spinner.text = chalk.yellow(`Skipping ${serverConfig.name}: ${err.message}`);
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.error(chalk.yellow(`  Skipping ${serverConfig.name}: ${msg}`));
         }
       }
 
@@ -230,10 +265,14 @@ const mcpBindCommand = new Command('bind')
 
       const totalTools = allBindings.reduce((sum, b) => sum + (b.tools?.length || 0), 0);
       spinner.succeed(chalk.green(`Bound ${totalTools} tool(s) from ${allBindings.length} server(s)`));
-      console.log(chalk.gray(`  Bindings saved to: .tastekit/artifacts/bindings.v1.json`));
-    } catch (error: any) {
-      spinner.fail(chalk.red(`Binding failed: ${error.message}`));
-      process.exit(1);
+
+      if (globals.json) {
+        jsonOutput(bindingsArtifact);
+      }
+
+      detail('Bindings saved to', '.tastekit/artifacts/bindings.v1.json');
+    } catch (error) {
+      handleError(error, spinner);
     }
   });
 

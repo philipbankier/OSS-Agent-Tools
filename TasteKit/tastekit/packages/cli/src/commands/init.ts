@@ -1,4 +1,4 @@
-import { Command } from 'commander';
+import { Command, createOption } from 'commander';
 import { existsSync, mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import chalk from 'chalk';
@@ -7,12 +7,13 @@ import inquirer from 'inquirer';
 import YAML from 'yaml';
 import { listDomains, getDomainRubric } from '@tastekit/core/domains/index.js';
 import { autoDetectProvider, LLMProviderConfig } from '@tastekit/core/llm/index.js';
+import { detail, hint, handleError } from '../ui.js';
 
 export const initCommand = new Command('init')
   .description('Initialize a new TasteKit workspace')
   .argument('[path]', 'Path to initialize workspace', '.')
   .option('--domain <id>', 'Domain ID (skip interactive selection)')
-  .option('--depth <type>', 'Onboarding depth: quick, guided, or operator')
+  .addOption(createOption('--depth <type>', 'Onboarding depth').choices(['quick', 'guided', 'operator']))
   .action(async (path: string, options: { domain?: string; depth?: string }) => {
     try {
       const workspacePath = join(process.cwd(), path, '.tastekit');
@@ -128,18 +129,17 @@ export const initCommand = new Command('init')
 
       createSpinner.succeed(chalk.green('TasteKit workspace initialized'));
 
-      console.log(`\n  Domain: ${chalk.bold(domainId)}`);
-      console.log(`  Depth:  ${chalk.bold(depth)}`);
+      console.log('');
+      detail('Domain', domainId);
+      detail('Depth', depth);
       if (llmConfig) {
-        console.log(`  LLM:    ${chalk.bold(llmConfig.provider)}${llmConfig.model ? ` (${llmConfig.model})` : ''}`);
+        detail('LLM', `${llmConfig.provider}${llmConfig.model ? ` (${llmConfig.model})` : ''}`);
       }
 
-      console.log('\nNext step:');
-      console.log(chalk.cyan('  Run'), chalk.bold('tastekit onboard'), chalk.cyan('to start the interview'));
+      console.log('');
+      hint('tastekit onboard', 'start the interview');
     } catch (error) {
-      console.error(chalk.red('Failed to initialize workspace'));
-      console.error(error);
-      process.exit(1);
+      handleError(error);
     }
   });
 

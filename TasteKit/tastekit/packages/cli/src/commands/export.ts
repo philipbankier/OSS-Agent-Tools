@@ -1,8 +1,9 @@
-import { Command } from 'commander';
+import { Command, createOption } from 'commander';
 import chalk from 'chalk';
 import ora from 'ora';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
+import { detail, hint, handleError } from '../ui.js';
 
 const ADAPTERS: Record<string, string> = {
   'claude-code': 'Claude Code',
@@ -13,7 +14,7 @@ const ADAPTERS: Record<string, string> = {
 
 export const exportCommand = new Command('export')
   .description('Export to runtime adapter format')
-  .option('--target <adapter>', 'Target adapter: claude-code, manus, openclaw, autopilots, agents-md, agent-file')
+  .addOption(createOption('--target <adapter>', 'Target adapter').choices(['claude-code', 'manus', 'openclaw', 'autopilots', 'agents-md', 'agent-file']))
   .option('--out <dir>', 'Output directory', './export')
   .action(async (options) => {
     if (!options.target) {
@@ -54,9 +55,8 @@ export const exportCommand = new Command('export')
         const outPath = join(outDir, 'agent.af');
         writeFileSync(outPath, JSON.stringify(af, null, 2), 'utf-8');
         spinner.succeed(chalk.green(`Agent File exported to ${outPath}`));
-      } catch (err: any) {
-        spinner.fail(chalk.red(`Export failed: ${err.message}`));
-        process.exit(1);
+      } catch (error) {
+        handleError(error, spinner);
       }
       return;
     }
@@ -71,9 +71,8 @@ export const exportCommand = new Command('export')
         mkdirSync(join(outPath, '..'), { recursive: true });
         writeFileSync(outPath, agentsMd, 'utf-8');
         spinner.succeed(chalk.green(`AGENTS.md exported to ${outPath}`));
-      } catch (err: any) {
-        spinner.fail(chalk.red(`Export failed: ${err.message}`));
-        process.exit(1);
+      } catch (error) {
+        handleError(error, spinner);
       }
       return;
     }
@@ -100,11 +99,10 @@ export const exportCommand = new Command('export')
       });
 
       spinner.succeed(chalk.green(`Exported to ${outDir}/`));
-      console.log(chalk.cyan(`\nTarget: ${ADAPTERS[options.target]}`));
-      console.log(chalk.gray(`Files written to: ${outDir}/`));
-    } catch (err: any) {
-      spinner.fail(chalk.red(`Export failed: ${err.message}`));
-      process.exit(1);
+      detail('Target', ADAPTERS[options.target]);
+      detail('Files written to', `${outDir}/`);
+    } catch (error) {
+      handleError(error, spinner);
     }
   });
 

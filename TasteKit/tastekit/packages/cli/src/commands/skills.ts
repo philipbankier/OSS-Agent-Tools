@@ -5,19 +5,19 @@ import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { lintSkills } from '@tastekit/core/skills';
 import { packSkills } from '@tastekit/core/skills';
+import { getGlobalOptions, riskColor, header, hint, table, handleError, jsonOutput } from '../ui.js';
 
 const skillsListCommand = new Command('list')
   .description('List all skills')
-  .action(async () => {
+  .action(async (_options, cmd) => {
+    const globals = getGlobalOptions(cmd);
     const workspacePath = process.cwd();
     const manifestPath = join(workspacePath, '.tastekit', 'skills', 'manifest.v1.yaml');
-    const skillsDir = join(workspacePath, '.tastekit', 'skills');
-
-    console.log(chalk.bold('\nSkills Library\n'));
 
     if (!existsSync(manifestPath)) {
+      if (globals.json) jsonOutput({ skills: [] });
       console.log(chalk.gray('No skills manifest found.'));
-      console.log(chalk.cyan('\nRun'), chalk.bold('tastekit compile'), chalk.cyan('to generate skills.'));
+      hint('tastekit compile', 'generate skills');
       return;
     }
 
@@ -26,33 +26,45 @@ const skillsListCommand = new Command('list')
       const manifest = YAML.parse(readFileSync(manifestPath, 'utf-8'));
 
       if (!manifest.skills || manifest.skills.length === 0) {
+        if (globals.json) jsonOutput({ skills: [] });
         console.log(chalk.gray('No skills defined.'));
         return;
       }
 
-      for (const skill of manifest.skills) {
-        const riskColor = skill.risk_level === 'high' ? chalk.red
-          : skill.risk_level === 'medium' ? chalk.yellow
-          : chalk.green;
-
-        console.log(`  ${chalk.bold(skill.name)} ${chalk.gray(`(${skill.skill_id})`)}`);
-        console.log(`    ${skill.description}`);
-        console.log(`    Risk: ${riskColor(skill.risk_level)}  Tags: ${chalk.gray(skill.tags?.join(', ') || 'none')}`);
-        console.log(`    Runtimes: ${chalk.gray(skill.compatible_runtimes?.join(', ') || 'all')}`);
-        console.log('');
+      if (globals.json) {
+        jsonOutput(manifest);
       }
 
-      console.log(chalk.gray(`${manifest.skills.length} skill(s) found in ${skillsDir}`));
-    } catch (err: any) {
-      console.error(chalk.red(`Failed to read skills: ${err.message}`));
-      process.exit(1);
+      header('Skills Library');
+
+      table(
+        [
+          { label: 'Name', width: 26 },
+          { label: 'ID', width: 22 },
+          { label: 'Risk', width: 8 },
+          { label: 'Tags', width: 28 },
+          { label: 'Runtimes', width: 24 },
+        ],
+        manifest.skills.map((skill: any) => [
+          chalk.bold(skill.name),
+          chalk.gray(skill.skill_id),
+          riskColor(skill.risk_level),
+          chalk.gray(skill.tags?.join(', ') || 'none'),
+          chalk.gray(skill.compatible_runtimes?.join(', ') || 'all'),
+        ]),
+      );
+
+      console.log(chalk.gray(`\n  ${manifest.skills.length} skill(s) found.`));
+    } catch (error) {
+      handleError(error);
     }
   });
 
 const skillsLintCommand = new Command('lint')
   .description('Validate skills structure')
   .option('--fix', 'Show suggestions for fixing issues')
-  .action(async () => {
+  .action(async (_options, cmd) => {
+    const globals = getGlobalOptions(cmd);
     const workspacePath = process.cwd();
     const skillsDir = join(workspacePath, '.tastekit', 'skills');
 
@@ -63,6 +75,7 @@ const skillsLintCommand = new Command('lint')
 
       if (result.valid && result.warnings.length === 0) {
         spinner.succeed(chalk.green('All skills are valid.'));
+        if (globals.json) jsonOutput({ valid: true, errors: [], warnings: [] });
         return;
       }
 
@@ -70,6 +83,10 @@ const skillsLintCommand = new Command('lint')
         spinner.warn(chalk.yellow(`Valid with ${result.warnings.length} warning(s)`));
       } else {
         spinner.fail(chalk.red(`${result.errors.length} error(s), ${result.warnings.length} warning(s)`));
+      }
+
+      if (globals.json) {
+        jsonOutput({ valid: result.valid, errors: result.errors, warnings: result.warnings });
       }
 
       console.log('');
@@ -85,9 +102,8 @@ const skillsLintCommand = new Command('lint')
       if (!result.valid) {
         process.exit(1);
       }
-    } catch (err: any) {
-      spinner.fail(chalk.red(`Lint failed: ${err.message}`));
-      process.exit(1);
+    } catch (error) {
+      handleError(error, spinner);
     }
   });
 
@@ -114,9 +130,8 @@ const skillsPackCommand = new Command('pack')
       });
 
       spinner.succeed(chalk.green(`Skills packed to ${outputPath}`));
-    } catch (err: any) {
-      spinner.fail(chalk.red(`Pack failed: ${err.message}`));
-      process.exit(1);
+    } catch (error) {
+      handleError(error, spinner);
     }
   });
 
