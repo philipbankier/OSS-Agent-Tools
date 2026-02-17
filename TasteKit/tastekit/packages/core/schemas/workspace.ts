@@ -1,8 +1,9 @@
 import { z } from 'zod';
+import { LLMProviderConfigSchema } from '../llm/provider.js';
 
 /**
  * Workspace Configuration Schema
- * 
+ *
  * Configuration for a TasteKit workspace (.tastekit/tastekit.yaml)
  */
 
@@ -10,13 +11,19 @@ export const WorkspaceConfigSchema = z.object({
   version: z.string().describe('TasteKit version'),
   project_name: z.string(),
   created_at: z.string().datetime(),
-  
+
+  /** Selected domain (e.g., 'content-agent', 'development-agent') */
+  domain_id: z.string().optional(),
+
+  /** LLM provider configuration for onboarding */
+  llm_provider: LLMProviderConfigSchema.optional(),
+
   onboarding: z.object({
     depth: z.enum(['quick', 'guided', 'operator']),
     completed: z.boolean().default(false),
     session_path: z.string().optional().describe('Path to session.json'),
   }).optional(),
-  
+
   compilation: z.object({
     last_compiled_at: z.string().datetime().optional(),
     artifacts_version: z.string().optional(),
@@ -24,23 +31,76 @@ export const WorkspaceConfigSchema = z.object({
 });
 
 /**
+ * Interview transcript turn
+ */
+export const InterviewTurnSchema = z.object({
+  turn_number: z.number(),
+  role: z.enum(['interviewer', 'user']),
+  content: z.string(),
+  timestamp: z.string(),
+  dimension_refs: z.array(z.string()).optional(),
+});
+
+/**
+ * Dimension coverage tracking
+ */
+export const DimensionCoverageSchema = z.object({
+  dimension_id: z.string(),
+  status: z.enum(['not_started', 'in_progress', 'covered', 'skipped']),
+  summary: z.string().optional(),
+  extracted_facts: z.array(z.string()).optional(),
+  relevant_turns: z.array(z.number()),
+});
+
+/**
+ * Interview state (for resume support)
+ */
+export const InterviewStateSchema = z.object({
+  transcript: z.array(InterviewTurnSchema),
+  dimension_coverage: z.array(DimensionCoverageSchema),
+  is_complete: z.boolean(),
+  turn_count: z.number(),
+});
+
+/**
  * Session State Schema
- * 
- * Resumable onboarding wizard state (.tastekit/session.json)
+ *
+ * Resumable onboarding state (.tastekit/session.json)
+ * All new fields are optional for backward compatibility with old sessions.
  */
 export const SessionStateSchema = z.object({
   session_id: z.string(),
   started_at: z.string().datetime(),
   last_updated_at: z.string().datetime(),
-  
+
   depth: z.enum(['quick', 'guided', 'operator']),
   current_step: z.string(),
   completed_steps: z.array(z.string()),
-  
+
   answers: z.record(z.any()).describe('User answers by question ID'),
-  
+
   metadata: z.record(z.any()).optional(),
+
+  // --- LLM interview extensions (all optional for backward compat) ---
+
+  /** Domain selected during init */
+  domain_id: z.string().optional(),
+
+  /** LLM provider used for interview */
+  llm_provider: z.object({
+    name: z.string(),
+    model: z.string().optional(),
+  }).optional(),
+
+  /** Full interview state (for resume) */
+  interview: InterviewStateSchema.optional(),
+
+  /** Structured answers extracted by LLM at end of interview */
+  structured_answers: z.any().optional(),
 });
 
 export type WorkspaceConfig = z.infer<typeof WorkspaceConfigSchema>;
 export type SessionState = z.infer<typeof SessionStateSchema>;
+export type InterviewTurn = z.infer<typeof InterviewTurnSchema>;
+export type DimensionCoverage = z.infer<typeof DimensionCoverageSchema>;
+export type InterviewState = z.infer<typeof InterviewStateSchema>;

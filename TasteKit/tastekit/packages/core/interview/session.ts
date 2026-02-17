@@ -28,6 +28,11 @@ export function createSession(depth: 'quick' | 'guided' | 'operator'): SessionSt
 }
 
 export function isSessionComplete(session: SessionState): boolean {
+  // New LLM interview flow
+  if (session.interview) {
+    return session.interview.is_complete;
+  }
+  // Legacy hardcoded flow (backward compat)
   const requiredSteps = ['welcome', 'goals', 'tone', 'tradeoffs'];
   return requiredSteps.every(step => session.completed_steps.includes(step));
 }

@@ -17,3 +17,4 @@ export * as tracing from './tracing/index.js';
 export * as drift from './drift/index.js';
 export * as evalModule from './eval/index.js';
 export * as domains from './domains/index.js';
+export * as llm from './llm/index.js';

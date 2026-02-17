@@ -60,19 +60,33 @@ Goal: Every CLI command works end-to-end. A user can init, onboard, compile, exp
 
 Goal: TasteKit is usable by real users as a standalone tool.
 
+### 2.0 LLM-Driven Onboarding System
+- [x] LLM Provider Interface — Anthropic, OpenAI, Ollama (packages/core/llm/)
+- [x] Domain Rubric Format — dimensions not questions (packages/core/interview/rubric.ts)
+- [x] Universal Rubric — 7 shared dimensions across all domains (packages/core/interview/universal-rubric.ts)
+- [x] Content Agent Rubric — 16 domain-specific dimensions (packages/core/domains/content-agent/rubric.ts)
+- [x] Development Agent Rubric — 24 hybrid dimensions (packages/core/domains/development-agent/rubric.ts)
+- [x] Session & Schema Extensions — backward compatible (packages/core/schemas/workspace.ts)
+- [x] Interviewer Engine — LLM-driven adaptive interview with coverage tracking (packages/core/interview/interviewer.ts)
+- [x] Constitution Compiler — dual-path: rich structured answers + legacy flat answers (packages/core/compiler/constitution-compiler.ts)
+- [x] `tastekit init` — domain selection, depth selection, LLM auto-detection
+- [x] `tastekit onboard` — LLM interview with resume support
+- [x] `tastekit compile` — wired to real compiler (no longer a stub)
+
 ### 2.1 Complete Domains
-- [ ] Research agent domain (questions, skills, playbooks)
+- [ ] Research agent domain (rubric, skills, playbooks)
 - [ ] Sales agent domain
 - [ ] Support agent domain
-- [ ] Development agent domain
+- [x] Development agent domain (rubric complete)
+- [x] Content agent domain (rubric complete)
 
 ### 2.2 Compiler Completions
 - [ ] Skills library compilation (compiler.ts TODO)
 - [ ] Playbook generation (compiler.ts TODO)
-- [ ] Better constitution generation (error handling, richer output)
+- [x] Rich constitution generation (structured answers path with rationale, examples, evidence, taboos)
 
 ### 2.3 Developer Experience
-- [ ] Interactive TUI for onboarding (beyond basic inquirer)
+- [x] LLM-driven onboarding interview (replaces basic inquirer wizard)
 - [ ] Rich CLI output with formatting and colors
 - [ ] Better error messages with actionable suggestions
 - [ ] Tab completion for CLI commands

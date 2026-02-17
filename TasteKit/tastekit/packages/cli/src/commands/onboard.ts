@@ -1,185 +1,143 @@
 import { Command } from 'commander';
-import { existsSync, readFileSync, writeFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import inquirer from 'inquirer';
 import chalk from 'chalk';
 import ora from 'ora';
-import { v4 as uuidv4 } from 'uuid';
-
-type OnboardingDepth = 'quick' | 'guided' | 'operator';
-
-interface SessionState {
-  session_id: string;
-  started_at: string;
-  last_updated_at: string;
-  depth: OnboardingDepth;
-  current_step: string;
-  completed_steps: string[];
-  answers: Record<string, any>;
-}
+import YAML from 'yaml';
+import { createSession, loadSession, saveSession } from '@tastekit/core/interview/session.js';
+import { Interviewer } from '@tastekit/core/interview/interviewer.js';
+import { resolveProvider, autoDetectProvider } from '@tastekit/core/llm/resolve.js';
+import { getDomainRubric } from '@tastekit/core/domains/index.js';
+import { DomainRubric } from '@tastekit/core/interview/rubric.js';
+import { WorkspaceConfig, InterviewState } from '@tastekit/core/schemas/workspace.js';
 
 export const onboardCommand = new Command('onboard')
-  .description('Run the interactive onboarding wizard')
-  .option('--depth <type>', 'Onboarding depth: quick, guided, or operator', 'guided')
+  .description('Run the LLM-driven onboarding interview')
+  .option('--depth <type>', 'Override depth: quick, guided, or operator')
   .option('--resume', 'Resume from previous session')
+  .option('--provider <name>', 'Override LLM provider: anthropic, openai, ollama')
   .action(async (options) => {
     const workspacePath = join(process.cwd(), '.tastekit');
+    const configPath = join(workspacePath, 'tastekit.yaml');
     const sessionPath = join(workspacePath, 'session.json');
-    
+
     if (!existsSync(workspacePath)) {
       console.error(chalk.red('No TasteKit workspace found. Run'), chalk.bold('tastekit init'), chalk.red('first.'));
       process.exit(1);
     }
-    
-    let session: SessionState;
-    
-    // Load or create session
-    if (options.resume && existsSync(sessionPath)) {
-      const spinner = ora('Resuming previous session...').start();
-      session = JSON.parse(readFileSync(sessionPath, 'utf-8'));
-      spinner.succeed(chalk.green('Session loaded'));
-    } else {
-      session = {
-        session_id: uuidv4(),
-        started_at: new Date().toISOString(),
-        last_updated_at: new Date().toISOString(),
-        depth: options.depth as OnboardingDepth,
-        current_step: 'welcome',
-        completed_steps: [],
-        answers: {},
-      };
-    }
-    
-    console.log(chalk.bold.cyan('\n🎨 TasteKit Onboarding Wizard\n'));
-    console.log(chalk.gray(`Session ID: ${session.session_id}`));
-    console.log(chalk.gray(`Depth: ${session.depth}\n`));
-    
-    // Welcome
-    if (!session.completed_steps.includes('welcome')) {
-      console.log(chalk.bold('Welcome to TasteKit!'));
-      console.log('This wizard will help you define your taste profile.\n');
-      
-      const { ready } = await inquirer.prompt([
-        {
-          type: 'confirm',
-          name: 'ready',
-          message: 'Ready to begin?',
-          default: true,
-        },
-      ]);
-      
-      if (!ready) {
-        console.log(chalk.yellow('Onboarding cancelled. Run'), chalk.bold('tastekit onboard --resume'), chalk.yellow('to continue later.'));
-        saveSession(sessionPath, session);
-        process.exit(0);
-      }
-      
-      session.completed_steps.push('welcome');
-      session.current_step = 'goals';
-      saveSession(sessionPath, session);
-    }
-    
-    // Goals and principles
-    if (!session.completed_steps.includes('goals')) {
-      console.log(chalk.bold('\n📋 Goals and Principles\n'));
-      
-      const answers = await inquirer.prompt([
-        {
-          type: 'input',
-          name: 'primary_goal',
-          message: 'What is your primary goal for using agents?',
-          validate: (input) => input.length > 0 || 'Please provide a goal',
-        },
-        {
-          type: 'input',
-          name: 'key_principles',
-          message: 'What are your top 3 guiding principles? (comma-separated)',
-          validate: (input) => input.length > 0 || 'Please provide at least one principle',
-        },
-      ]);
-      
-      session.answers.goals = answers;
-      session.completed_steps.push('goals');
-      session.current_step = 'tone';
-      saveSession(sessionPath, session);
-    }
-    
-    // Tone and voice
-    if (!session.completed_steps.includes('tone')) {
-      console.log(chalk.bold('\n🎤 Tone and Voice\n'));
-      
-      const answers = await inquirer.prompt([
-        {
-          type: 'checkbox',
-          name: 'voice_keywords',
-          message: 'Select keywords that describe your preferred communication style:',
-          choices: [
-            'professional',
-            'casual',
-            'technical',
-            'friendly',
-            'concise',
-            'detailed',
-            'formal',
-            'creative',
-          ],
-        },
-        {
-          type: 'input',
-          name: 'forbidden_phrases',
-          message: 'Any phrases or words to avoid? (comma-separated, or leave blank)',
-        },
-      ]);
-      
-      session.answers.tone = answers;
-      session.completed_steps.push('tone');
-      session.current_step = 'tradeoffs';
-      saveSession(sessionPath, session);
-    }
-    
-    // Tradeoffs
-    if (!session.completed_steps.includes('tradeoffs')) {
-      console.log(chalk.bold('\n⚖️  Tradeoffs\n'));
-      
-      const answers = await inquirer.prompt([
-        {
-          type: 'list',
-          name: 'accuracy_vs_speed',
-          message: 'Accuracy vs Speed preference:',
-          choices: [
-            { name: 'Strongly prefer speed', value: 0.2 },
-            { name: 'Slightly prefer speed', value: 0.4 },
-            { name: 'Balanced', value: 0.5 },
-            { name: 'Slightly prefer accuracy', value: 0.6 },
-            { name: 'Strongly prefer accuracy', value: 0.8 },
-          ],
-        },
-        {
-          type: 'list',
-          name: 'autonomy_level',
-          message: 'How autonomous should agents be?',
-          choices: [
-            { name: 'Always ask for approval', value: 0.2 },
-            { name: 'Ask for major decisions', value: 0.5 },
-            { name: 'Mostly autonomous', value: 0.8 },
-          ],
-        },
-      ]);
-      
-      session.answers.tradeoffs = answers;
-      session.completed_steps.push('tradeoffs');
-      session.current_step = 'complete';
-      saveSession(sessionPath, session);
-    }
-    
-    // Complete
-    console.log(chalk.bold.green('\n✅ Onboarding Complete!\n'));
-    console.log(chalk.gray('Your answers have been saved to'), chalk.bold('.tastekit/session.json'));
-    console.log('\nNext steps:');
-    console.log(chalk.cyan('  Run'), chalk.bold('tastekit compile'), chalk.cyan('to generate your taste artifacts'));
-  });
 
-function saveSession(path: string, session: SessionState): void {
-  session.last_updated_at = new Date().toISOString();
-  writeFileSync(path, JSON.stringify(session, null, 2));
-}
+    if (!existsSync(configPath)) {
+      console.error(chalk.red('No tastekit.yaml found. Run'), chalk.bold('tastekit init'), chalk.red('first.'));
+      process.exit(1);
+    }
+
+    // Load config
+    const config: WorkspaceConfig = YAML.parse(readFileSync(configPath, 'utf-8'));
+    const depth = (options.depth ?? config.onboarding?.depth ?? 'guided') as 'quick' | 'guided' | 'operator';
+    const domainId = config.domain_id;
+
+    if (!domainId) {
+      console.error(chalk.red('No domain selected. Run'), chalk.bold('tastekit init'), chalk.red('to set up your workspace.'));
+      process.exit(1);
+    }
+
+    // Resolve LLM provider
+    const spinner = ora('Connecting to LLM...').start();
+    try {
+      const providerConfig = options.provider
+        ? { provider: options.provider as 'anthropic' | 'openai' | 'ollama' | 'custom' }
+        : config.llm_provider ?? await autoDetectProvider();
+      const llm = await resolveProvider(providerConfig);
+      spinner.succeed(`Connected to ${chalk.bold(llm.name)}`);
+
+      // Load domain rubric (fall back to universal-only if no domain rubric)
+      const rubric: DomainRubric = getDomainRubric(domainId) ?? {
+        domain_id: domainId,
+        version: '0.1.0',
+        interview_goal: `Configure a ${domainId} agent based on your preferences and principles.`,
+        dimensions: [],
+        includes_universal: true,
+      };
+
+      // Create or resume session
+      let session;
+      let resumeState: InterviewState | undefined;
+
+      if (options.resume && existsSync(sessionPath)) {
+        session = loadSession(sessionPath);
+        resumeState = session.interview as InterviewState | undefined;
+        if (resumeState?.is_complete) {
+          console.log(chalk.yellow('Previous session is already complete. Starting fresh.'));
+          session = createSession(depth);
+          resumeState = undefined;
+        } else {
+          console.log(chalk.green('Resuming previous session...'));
+        }
+      } else {
+        session = createSession(depth);
+      }
+
+      session.domain_id = domainId;
+      session.llm_provider = { name: llm.name };
+
+      console.log(chalk.bold.cyan('\nTasteKit Onboarding Interview\n'));
+      console.log(chalk.gray(`Domain: ${domainId} | Depth: ${depth} | LLM: ${llm.name}`));
+      console.log(chalk.gray('Type /save to save and quit, /skip to skip a topic\n'));
+
+      // Run interviewer
+      const interviewer = new Interviewer({
+        llm,
+        rubric,
+        depth,
+        resumeFrom: resumeState,
+        onInterviewerMessage: (msg) => {
+          console.log(chalk.cyan('\n  ') + msg + '\n');
+        },
+        getUserInput: async () => {
+          const { answer } = await inquirer.prompt([{
+            type: 'input',
+            name: 'answer',
+            message: chalk.green('You:'),
+            validate: (input: string) => input.length > 0 || 'Please type a response (or /save to save and quit)',
+          }]);
+          return answer;
+        },
+        onStateChange: (state) => {
+          session.interview = state;
+          session.current_step = 'interview';
+          saveSession(sessionPath, session);
+        },
+      });
+
+      const structuredAnswers = await interviewer.run();
+
+      // Save final session
+      session.structured_answers = structuredAnswers;
+      session.completed_steps = ['welcome', 'interview'];
+      session.current_step = 'complete';
+      session.interview = interviewer.getState();
+      saveSession(sessionPath, session);
+
+      // Show coverage summary
+      const state = interviewer.getState();
+      const covered = state.dimension_coverage.filter(d => d.status === 'covered').length;
+      const total = state.dimension_coverage.length;
+      const skipped = state.dimension_coverage.filter(d => d.status === 'skipped').length;
+
+      console.log(chalk.bold.green('\nOnboarding complete!'));
+      console.log(chalk.gray(`  Dimensions covered: ${covered}/${total}${skipped > 0 ? ` (${skipped} skipped)` : ''}`));
+      console.log(chalk.gray(`  Principles extracted: ${structuredAnswers.principles?.length ?? 0}`));
+      console.log(chalk.gray('  Session saved to .tastekit/session.json'));
+      console.log('\nNext: run ' + chalk.bold('tastekit compile') + ' to generate your taste artifacts.');
+
+    } catch (error) {
+      spinner.fail(chalk.red('Onboarding failed'));
+      if (error instanceof Error) {
+        console.error(chalk.red(error.message));
+      } else {
+        console.error(error);
+      }
+      process.exit(1);
+    }
+  });
