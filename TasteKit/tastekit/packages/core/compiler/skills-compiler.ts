@@ -97,9 +97,18 @@ async function resolveDomainSkills(domainId?: string): Promise<DomainSkill[]> {
       const { ContentAgentSkills } = await import('../domains/content-agent/skills/index.js');
       return ContentAgentSkills as DomainSkill[];
     }
-    // Add more domains here as they get skills:
-    // case 'development-agent': { ... }
-    // case 'research-agent': { ... }
+    case 'research-agent': {
+      const { ResearchAgentSkills } = await import('../domains/research-agent/skills/index.js');
+      return ResearchAgentSkills as DomainSkill[];
+    }
+    case 'sales-agent': {
+      const { SalesAgentSkills } = await import('../domains/sales-agent/skills/index.js');
+      return SalesAgentSkills as DomainSkill[];
+    }
+    case 'support-agent': {
+      const { SupportAgentSkills } = await import('../domains/support-agent/skills/index.js');
+      return SupportAgentSkills as DomainSkill[];
+    }
     default:
       return [];
   }

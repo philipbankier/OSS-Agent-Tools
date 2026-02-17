@@ -11,6 +11,9 @@ import { SupportAgentDomain } from './support-agent/domain.js';
 import { DevelopmentAgentDomain } from './development-agent/domain.js';
 import { ContentAgentRubric } from './content-agent/rubric.js';
 import { DevelopmentAgentRubric } from './development-agent/rubric.js';
+import { ResearchAgentRubric } from './research-agent/rubric.js';
+import { SalesAgentRubric } from './sales-agent/rubric.js';
+import { SupportAgentRubric } from './support-agent/rubric.js';
 import { DomainRubric } from '../interview/rubric.js';
 
 export const AVAILABLE_DOMAINS = [
@@ -25,6 +28,9 @@ export const AVAILABLE_DOMAINS = [
 const DOMAIN_RUBRICS: Record<string, DomainRubric> = {
   'content-agent': ContentAgentRubric,
   'development-agent': DevelopmentAgentRubric,
+  'research-agent': ResearchAgentRubric,
+  'sales-agent': SalesAgentRubric,
+  'support-agent': SupportAgentRubric,
 };
 
 export function getDomainById(id: string) {
@@ -47,3 +53,6 @@ export function listDomains() {
 }
 
 export * from './content-agent/index.js';
+export * from './research-agent/index.js';
+export * from './sales-agent/index.js';
+export * from './support-agent/index.js';

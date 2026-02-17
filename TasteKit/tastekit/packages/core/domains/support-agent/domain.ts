@@ -1,10 +1,7 @@
 /**
- * Support Agent Domain (STUB)
- * 
+ * Support Agent Domain
+ *
  * Domain for customer support, troubleshooting, and user assistance agents.
- * 
- * STATUS: Stub implementation. Community contributions welcome!
- * See: docs/domains/support-agent.md for contribution guidelines.
  */
 
 import { DomainDefinition } from '../content-agent/domain.js';
@@ -13,7 +10,7 @@ export const SupportAgentDomain: DomainDefinition = {
   id: 'support-agent',
   name: 'Support Agent',
   description: 'Customer support, troubleshooting, and user assistance',
-  version: '0.5.0-stub',
+  version: '0.5.0',
   use_cases: [
     'Customer support ticket triage and response',
     'Knowledge base management',
@@ -27,9 +24,24 @@ export const SupportAgentDomain: DomainDefinition = {
     'chat-integration',
     'screen-reader',
   ],
-  default_autonomy_level: 0.4, // Lower autonomy for customer-facing
+  default_autonomy_level: 0.4,
 };
 
-// TODO: Add specialized questions in questions.ts
-// TODO: Add support skills in skills/
-// TODO: Add example playbooks in playbooks/
+export const SUPPORT_CHANNELS = [
+  'email',
+  'chat',
+  'phone',
+  'social_media',
+  'self_service',
+] as const;
+
+export type SupportChannel = typeof SUPPORT_CHANNELS[number];
+
+export const TICKET_PRIORITIES = [
+  'critical',
+  'high',
+  'medium',
+  'low',
+] as const;
+
+export type TicketPriority = typeof TICKET_PRIORITIES[number];

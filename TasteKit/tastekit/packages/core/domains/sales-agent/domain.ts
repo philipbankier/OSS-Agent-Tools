@@ -1,10 +1,7 @@
 /**
- * Sales Agent Domain (STUB)
- * 
+ * Sales Agent Domain
+ *
  * Domain for lead generation, qualification, and deal management agents.
- * 
- * STATUS: Stub implementation. Community contributions welcome!
- * See: docs/domains/sales-agent.md for contribution guidelines.
  */
 
 import { DomainDefinition } from '../content-agent/domain.js';
@@ -13,7 +10,7 @@ export const SalesAgentDomain: DomainDefinition = {
   id: 'sales-agent',
   name: 'Sales Agent',
   description: 'Lead generation, qualification, and deal management',
-  version: '0.5.0-stub',
+  version: '0.5.0',
   use_cases: [
     'Lead qualification and outreach',
     'CRM management and follow-ups',
@@ -27,9 +24,27 @@ export const SalesAgentDomain: DomainDefinition = {
     'document-generator',
     'web-search',
   ],
-  default_autonomy_level: 0.5, // Moderate autonomy for sales
+  default_autonomy_level: 0.5,
 };
 
-// TODO: Add specialized questions in questions.ts
-// TODO: Add sales skills in skills/
-// TODO: Add example playbooks in playbooks/
+export const SALES_METHODOLOGIES = [
+  'consultative',
+  'challenger',
+  'solution',
+  'relationship',
+  'transactional',
+] as const;
+
+export type SalesMethodology = typeof SALES_METHODOLOGIES[number];
+
+export const DEAL_STAGES = [
+  'prospecting',
+  'qualification',
+  'discovery',
+  'proposal',
+  'negotiation',
+  'closed_won',
+  'closed_lost',
+] as const;
+
+export type DealStage = typeof DEAL_STAGES[number];

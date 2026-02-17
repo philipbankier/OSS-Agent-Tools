@@ -1,10 +1,7 @@
 /**
- * Research Agent Domain (STUB)
- * 
+ * Research Agent Domain
+ *
  * Domain for information gathering, analysis, and synthesis agents.
- * 
- * STATUS: Stub implementation. Community contributions welcome!
- * See: docs/domains/research-agent.md for contribution guidelines.
  */
 
 import { DomainDefinition } from '../content-agent/domain.js';
@@ -13,7 +10,7 @@ export const ResearchAgentDomain: DomainDefinition = {
   id: 'research-agent',
   name: 'Research Agent',
   description: 'Information gathering, analysis, and synthesis',
-  version: '0.5.0-stub',
+  version: '0.5.0',
   use_cases: [
     'Market research and competitive analysis',
     'Academic research and literature reviews',
@@ -27,9 +24,26 @@ export const ResearchAgentDomain: DomainDefinition = {
     'pdf-reader',
     'data-analysis',
   ],
-  default_autonomy_level: 0.7, // Higher autonomy for research
+  default_autonomy_level: 0.7,
 };
 
-// TODO: Add specialized questions in questions.ts
-// TODO: Add research skills in skills/
-// TODO: Add example playbooks in playbooks/
+export const RESEARCH_OUTPUT_FORMATS = [
+  'executive_summary',
+  'detailed_report',
+  'bullet_points',
+  'data_table',
+  'presentation_outline',
+] as const;
+
+export type ResearchOutputFormat = typeof RESEARCH_OUTPUT_FORMATS[number];
+
+export const RESEARCH_SOURCE_TYPES = [
+  'academic',
+  'news',
+  'industry_reports',
+  'government',
+  'primary_interviews',
+  'social_media',
+] as const;
+
+export type ResearchSourceType = typeof RESEARCH_SOURCE_TYPES[number];

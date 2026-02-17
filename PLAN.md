@@ -74,9 +74,9 @@ Goal: TasteKit is usable by real users as a standalone tool.
 - [x] `tastekit compile` — wired to real compiler (no longer a stub)
 
 ### 2.1 Complete Domains
-- [ ] Research agent domain (rubric, skills, playbooks)
-- [ ] Sales agent domain
-- [ ] Support agent domain
+- [x] Research agent domain (18 rubric dimensions, 2 skills, 2 playbooks, questions)
+- [x] Sales agent domain (18 rubric dimensions, 2 skills, 2 playbooks, questions)
+- [x] Support agent domain (18 rubric dimensions, 2 skills, 2 playbooks, questions)
 - [x] Development agent domain (rubric complete)
 - [x] Content agent domain (rubric complete)
 

@@ -64,9 +64,12 @@ async function resolveDomainPlaybooks(domainId?: string): Promise<DomainPlaybook
   switch (domainId) {
     case 'content-agent':
       return getContentAgentPlaybooks();
-    // Add more domains here as they get playbooks:
-    // case 'development-agent': return getDevelopmentAgentPlaybooks();
-    // case 'research-agent': return getResearchAgentPlaybooks();
+    case 'research-agent':
+      return getResearchAgentPlaybooks();
+    case 'sales-agent':
+      return getSalesAgentPlaybooks();
+    case 'support-agent':
+      return getSupportAgentPlaybooks();
     default:
       return [];
   }
@@ -334,6 +337,568 @@ function getContentAgentPlaybooks(): DomainPlaybook[] {
             escalation_id: 'high-volume',
             trigger: 'Posts per week exceeds 10',
             approval_ref: 'guardrails.approval_rules.resource_usage',
+          },
+        ],
+      },
+    },
+  ];
+}
+
+/**
+ * Research agent playbooks — workflows for information gathering and analysis.
+ */
+function getResearchAgentPlaybooks(): DomainPlaybook[] {
+  return [
+    {
+      playbook: {
+        schema_version: 'playbook.v1',
+        id: 'quick-lookup',
+        name: 'Quick Lookup',
+        description: 'Simple fact-finding: research a question, synthesize findings, present answer.',
+        triggers: [{ type: 'manual' }],
+        inputs: [
+          { name: 'question', type: 'string', required: true, description: 'The question to research' },
+          { name: 'source_preferences', type: 'string', required: false, description: 'Preferred source types' },
+        ],
+        steps: [
+          {
+            step_id: 'research',
+            type: 'tool',
+            tool_ref: 'skill:web-research',
+            params_template: {
+              topic: '{{question}}',
+              scope: 'narrow',
+              max_sources: 5,
+            },
+            outputs: ['research_findings'],
+          },
+          {
+            step_id: 'synthesize',
+            type: 'think',
+            params_template: {
+              findings: '{{research_findings}}',
+              instruction: 'Synthesize findings into a concise answer',
+            },
+            outputs: ['answer'],
+          },
+          {
+            step_id: 'format-output',
+            type: 'write',
+            params_template: {
+              content: '{{answer}}',
+              format: 'research_summary',
+            },
+            outputs: ['final_answer'],
+          },
+        ],
+        checks: [
+          {
+            check_id: 'source-quality',
+            type: 'facts',
+            condition: 'Answer is supported by credible sources',
+          },
+          {
+            check_id: 'completeness',
+            type: 'taste',
+            condition: 'Answer addresses the original question fully',
+          },
+        ],
+        stop_conditions: [
+          {
+            condition: 'No relevant sources found',
+            reason: 'Cannot answer without credible sources',
+          },
+        ],
+        escalations: [],
+      },
+    },
+    {
+      playbook: {
+        schema_version: 'playbook.v1',
+        id: 'deep-dive-analysis',
+        name: 'Deep Dive Analysis',
+        description: 'Multi-source research: plan scope, gather sources, cross-reference, synthesize, and review.',
+        triggers: [{ type: 'manual' }],
+        inputs: [
+          { name: 'topic', type: 'string', required: true, description: 'Research topic' },
+          { name: 'scope', type: 'string', required: false, description: 'Research scope and boundaries' },
+          { name: 'output_format', type: 'string', required: false, description: 'Desired output format' },
+        ],
+        steps: [
+          {
+            step_id: 'plan-scope',
+            type: 'think',
+            params_template: {
+              topic: '{{topic}}',
+              instruction: 'Define research scope, key questions, and source strategy',
+            },
+            outputs: ['research_plan'],
+          },
+          {
+            step_id: 'gather-sources',
+            type: 'tool',
+            tool_ref: 'skill:web-research',
+            params_template: {
+              topic: '{{topic}}',
+              scope: 'broad',
+              max_sources: 15,
+            },
+            outputs: ['raw_findings'],
+          },
+          {
+            step_id: 'cross-reference',
+            type: 'think',
+            params_template: {
+              findings: '{{raw_findings}}',
+              instruction: 'Cross-reference findings, identify consensus and conflicts',
+            },
+            outputs: ['verified_findings'],
+          },
+          {
+            step_id: 'synthesize',
+            type: 'think',
+            params_template: {
+              findings: '{{verified_findings}}',
+              plan: '{{research_plan}}',
+              instruction: 'Synthesize into structured analysis with citations',
+            },
+            outputs: ['analysis'],
+          },
+          {
+            step_id: 'review',
+            type: 'approval_gate',
+            params_template: {
+              message: 'Review the research analysis. Approve or request deeper investigation.',
+              analysis: '{{analysis}}',
+            },
+            outputs: ['approved_analysis'],
+          },
+          {
+            step_id: 'finalize',
+            type: 'write',
+            params_template: {
+              content: '{{approved_analysis}}',
+              format: '{{output_format || "detailed_report"}}',
+            },
+            outputs: ['final_report'],
+          },
+        ],
+        checks: [
+          {
+            check_id: 'multi-source',
+            type: 'facts',
+            condition: 'Key claims supported by multiple independent sources',
+          },
+          {
+            check_id: 'bias-check',
+            type: 'taste',
+            condition: 'Analysis presents balanced perspectives where applicable',
+          },
+          {
+            check_id: 'citation-quality',
+            type: 'format',
+            condition: 'All claims properly cited per user citation standards',
+          },
+        ],
+        stop_conditions: [
+          {
+            condition: 'Insufficient credible sources on the topic',
+            reason: 'Cannot produce reliable analysis without adequate sourcing',
+          },
+        ],
+        escalations: [
+          {
+            escalation_id: 'sensitive-research',
+            trigger: 'Research involves confidential, proprietary, or ethically sensitive data',
+            approval_ref: 'guardrails.approval_rules.research_ethics',
+          },
+        ],
+      },
+    },
+  ];
+}
+
+/**
+ * Sales agent playbooks — workflows for lead management and deal progression.
+ */
+function getSalesAgentPlaybooks(): DomainPlaybook[] {
+  return [
+    {
+      playbook: {
+        schema_version: 'playbook.v1',
+        id: 'lead-outreach',
+        name: 'Lead Outreach',
+        description: 'Initial outreach to a new lead: research, qualify, draft email, review, send.',
+        triggers: [{ type: 'manual' }],
+        inputs: [
+          { name: 'lead_data', type: 'string', required: true, description: 'Lead information (name, company, role, context)' },
+          { name: 'outreach_type', type: 'string', required: false, description: 'Type of outreach (cold, warm, referral)' },
+        ],
+        steps: [
+          {
+            step_id: 'qualify-lead',
+            type: 'tool',
+            tool_ref: 'skill:lead-qualification',
+            params_template: {
+              lead_data: '{{lead_data}}',
+            },
+            outputs: ['qualification'],
+          },
+          {
+            step_id: 'assess-fit',
+            type: 'think',
+            params_template: {
+              qualification: '{{qualification}}',
+              instruction: 'Determine if lead is worth pursuing and best approach',
+            },
+            outputs: ['approach_decision'],
+          },
+          {
+            step_id: 'draft-email',
+            type: 'tool',
+            tool_ref: 'skill:outreach-email',
+            params_template: {
+              recipient: '{{lead_data}}',
+              purpose: '{{outreach_type || "cold_outreach"}}',
+              context: '{{approach_decision}}',
+              sequence_position: 1,
+            },
+            outputs: ['draft_email'],
+          },
+          {
+            step_id: 'review-email',
+            type: 'approval_gate',
+            params_template: {
+              message: 'Review outreach email before sending.',
+              email: '{{draft_email}}',
+              qualification: '{{qualification}}',
+            },
+            outputs: ['approved_email'],
+          },
+          {
+            step_id: 'send',
+            type: 'tool',
+            tool_ref: 'email-sender',
+            params_template: {
+              email: '{{approved_email}}',
+            },
+            outputs: ['send_result'],
+          },
+        ],
+        checks: [
+          {
+            check_id: 'qualification-check',
+            type: 'taste',
+            condition: 'Lead meets minimum qualification criteria before outreach',
+          },
+          {
+            check_id: 'compliance-check',
+            type: 'safety',
+            condition: 'Email complies with CAN-SPAM/GDPR regulations',
+          },
+          {
+            check_id: 'tone-check',
+            type: 'taste',
+            condition: 'Email matches sales communication style from constitution',
+          },
+        ],
+        stop_conditions: [
+          {
+            condition: 'Lead scores D or is disqualified',
+            reason: 'Lead does not meet minimum qualification criteria',
+          },
+        ],
+        escalations: [
+          {
+            escalation_id: 'high-value-lead',
+            trigger: 'Lead is enterprise-tier or strategic account',
+            approval_ref: 'guardrails.approval_rules.strategic_outreach',
+          },
+        ],
+      },
+    },
+    {
+      playbook: {
+        schema_version: 'playbook.v1',
+        id: 'proposal-workflow',
+        name: 'Proposal Workflow',
+        description: 'Create and deliver a sales proposal: gather requirements, draft, review, deliver.',
+        triggers: [{ type: 'manual' }],
+        inputs: [
+          { name: 'prospect', type: 'string', required: true, description: 'Prospect information and deal context' },
+          { name: 'requirements', type: 'string', required: true, description: 'Gathered requirements and pain points' },
+          { name: 'proposal_format', type: 'string', required: false, description: 'Desired format (doc, deck, email)' },
+        ],
+        steps: [
+          {
+            step_id: 'analyze-requirements',
+            type: 'think',
+            params_template: {
+              prospect: '{{prospect}}',
+              requirements: '{{requirements}}',
+              instruction: 'Analyze requirements and map to solution components',
+            },
+            outputs: ['solution_mapping'],
+          },
+          {
+            step_id: 'draft-proposal',
+            type: 'write',
+            params_template: {
+              content: '{{solution_mapping}}',
+              format: '{{proposal_format || "detailed_document"}}',
+            },
+            outputs: ['draft_proposal'],
+          },
+          {
+            step_id: 'review-proposal',
+            type: 'approval_gate',
+            params_template: {
+              message: 'Review proposal before delivering to prospect.',
+              proposal: '{{draft_proposal}}',
+              context: '{{requirements}}',
+            },
+            outputs: ['approved_proposal'],
+          },
+          {
+            step_id: 'deliver',
+            type: 'write',
+            params_template: {
+              content: '{{approved_proposal}}',
+              format: 'final_proposal',
+            },
+            outputs: ['delivered_proposal'],
+          },
+        ],
+        checks: [
+          {
+            check_id: 'requirements-coverage',
+            type: 'taste',
+            condition: 'Proposal addresses all stated requirements',
+          },
+          {
+            check_id: 'pricing-check',
+            type: 'safety',
+            condition: 'Pricing is within approved ranges and discount policies',
+          },
+          {
+            check_id: 'brand-consistency',
+            type: 'format',
+            condition: 'Proposal follows brand guidelines and formatting standards',
+          },
+        ],
+        stop_conditions: [
+          {
+            condition: 'Requirements are unclear or contradictory',
+            reason: 'Cannot create proposal without clear requirements',
+          },
+        ],
+        escalations: [
+          {
+            escalation_id: 'custom-pricing',
+            trigger: 'Proposal requires pricing outside standard range',
+            approval_ref: 'guardrails.approval_rules.pricing_override',
+          },
+        ],
+      },
+    },
+  ];
+}
+
+/**
+ * Support agent playbooks — workflows for customer support and ticket resolution.
+ */
+function getSupportAgentPlaybooks(): DomainPlaybook[] {
+  return [
+    {
+      playbook: {
+        schema_version: 'playbook.v1',
+        id: 'standard-ticket',
+        name: 'Standard Ticket Resolution',
+        description: 'Standard ticket flow: triage, research, draft response, review, send.',
+        triggers: [
+          { type: 'manual' },
+          { type: 'event', event_pattern: 'ticket.created' },
+        ],
+        inputs: [
+          { name: 'ticket', type: 'string', required: true, description: 'Ticket content and customer info' },
+          { name: 'channel', type: 'string', required: false, description: 'Support channel (email, chat, etc.)' },
+        ],
+        steps: [
+          {
+            step_id: 'triage',
+            type: 'tool',
+            tool_ref: 'skill:ticket-triage',
+            params_template: {
+              ticket: '{{ticket}}',
+            },
+            outputs: ['triage_result'],
+          },
+          {
+            step_id: 'research-solution',
+            type: 'think',
+            params_template: {
+              ticket: '{{ticket}}',
+              triage: '{{triage_result}}',
+              instruction: 'Research the issue and identify the best resolution',
+            },
+            outputs: ['resolution'],
+          },
+          {
+            step_id: 'draft-response',
+            type: 'tool',
+            tool_ref: 'skill:response-draft',
+            params_template: {
+              ticket: '{{ticket}}',
+              channel: '{{channel || "email"}}',
+              triage: '{{triage_result}}',
+              resolution: '{{resolution}}',
+            },
+            outputs: ['draft_response'],
+          },
+          {
+            step_id: 'review',
+            type: 'approval_gate',
+            params_template: {
+              message: 'Review response before sending to customer.',
+              response: '{{draft_response}}',
+              triage: '{{triage_result}}',
+            },
+            outputs: ['approved_response'],
+          },
+          {
+            step_id: 'send',
+            type: 'write',
+            params_template: {
+              content: '{{approved_response}}',
+              format: '{{channel}}_response',
+            },
+            outputs: ['sent_response'],
+          },
+        ],
+        checks: [
+          {
+            check_id: 'tone-match',
+            type: 'taste',
+            condition: 'Response matches support tone and empathy requirements',
+          },
+          {
+            check_id: 'resolution-quality',
+            type: 'taste',
+            condition: 'Response actually resolves the issue or clearly explains next steps',
+          },
+          {
+            check_id: 'channel-format',
+            type: 'format',
+            condition: 'Response is appropriate for the support channel',
+          },
+        ],
+        stop_conditions: [
+          {
+            condition: 'Ticket requires escalation based on triage',
+            reason: 'Issue is beyond agent capability or requires human intervention',
+          },
+        ],
+        escalations: [
+          {
+            escalation_id: 'angry-customer',
+            trigger: 'Customer sentiment is very negative or threatening',
+            approval_ref: 'guardrails.approval_rules.escalation',
+          },
+          {
+            escalation_id: 'billing-dispute',
+            trigger: 'Ticket involves billing, refunds, or financial matters',
+            approval_ref: 'guardrails.approval_rules.financial',
+          },
+        ],
+      },
+    },
+    {
+      playbook: {
+        schema_version: 'playbook.v1',
+        id: 'escalation-workflow',
+        name: 'Escalation Workflow',
+        description: 'Escalation flow: assess severity, gather context, create escalation package, hand off.',
+        triggers: [{ type: 'manual' }],
+        inputs: [
+          { name: 'ticket', type: 'string', required: true, description: 'Ticket requiring escalation' },
+          { name: 'reason', type: 'string', required: true, description: 'Reason for escalation' },
+          { name: 'target_team', type: 'string', required: false, description: 'Target team for escalation' },
+        ],
+        steps: [
+          {
+            step_id: 'assess-severity',
+            type: 'think',
+            params_template: {
+              ticket: '{{ticket}}',
+              reason: '{{reason}}',
+              instruction: 'Assess severity and determine appropriate escalation level',
+            },
+            outputs: ['severity_assessment'],
+          },
+          {
+            step_id: 'gather-context',
+            type: 'think',
+            params_template: {
+              ticket: '{{ticket}}',
+              assessment: '{{severity_assessment}}',
+              instruction: 'Compile all relevant context, customer history, and attempted resolutions',
+            },
+            outputs: ['escalation_context'],
+          },
+          {
+            step_id: 'create-package',
+            type: 'write',
+            params_template: {
+              content: '{{escalation_context}}',
+              format: 'escalation_package',
+            },
+            outputs: ['escalation_package'],
+          },
+          {
+            step_id: 'notify-customer',
+            type: 'tool',
+            tool_ref: 'skill:response-draft',
+            params_template: {
+              ticket: '{{ticket}}',
+              channel: 'email',
+              resolution: 'escalation_notification',
+            },
+            outputs: ['customer_notification'],
+          },
+          {
+            step_id: 'approve-handoff',
+            type: 'approval_gate',
+            params_template: {
+              message: 'Review escalation package and customer notification before handoff.',
+              package: '{{escalation_package}}',
+              notification: '{{customer_notification}}',
+            },
+            outputs: ['approved_handoff'],
+          },
+        ],
+        checks: [
+          {
+            check_id: 'context-completeness',
+            type: 'taste',
+            condition: 'Escalation package includes all relevant context and attempted resolutions',
+          },
+          {
+            check_id: 'customer-communication',
+            type: 'taste',
+            condition: 'Customer is notified about the escalation with appropriate empathy',
+          },
+        ],
+        stop_conditions: [
+          {
+            condition: 'Issue is resolved during escalation preparation',
+            reason: 'Resolution found, escalation no longer needed',
+          },
+        ],
+        escalations: [
+          {
+            escalation_id: 'critical-severity',
+            trigger: 'Severity is critical (data loss, security breach, complete outage)',
+            approval_ref: 'guardrails.approval_rules.critical_escalation',
           },
         ],
       },
