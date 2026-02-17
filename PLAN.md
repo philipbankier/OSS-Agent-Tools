@@ -1,6 +1,6 @@
 # Project Roadmap & Status
 
-Last updated: 2026-02-16
+Last updated: 2026-02-17
 
 This roadmap has two parallel tracks:
 - **Track A**: TasteKit + AutoClaw (taste compiler → agent runtime)
@@ -52,13 +52,12 @@ Goal: Every CLI command works end-to-end. A user can init, onboard, compile, exp
 - [x] Add test suite for compiler (constitution, guardrails, memory) — 20 tests
 - [x] Add test suite for drift detection (consolidator: retention, merge, edge cases) — 11 tests
 - [x] Add test suite for eval judge (deterministic, regex, schema, LLM mock) — 16 tests
-- [ ] CI pipeline runs tests on PR
 
 ---
 
-## Phase 2: Ship TasteKit v1.0
+## Phase 2: Complete TasteKit v1.0
 
-Goal: TasteKit is usable by real users as a standalone tool.
+Goal: TasteKit is feature-complete as a standalone tool.
 
 ### 2.0 LLM-Driven Onboarding System
 - [x] LLM Provider Interface — Anthropic, OpenAI, Ollama (packages/core/llm/)
@@ -94,16 +93,10 @@ Goal: TasteKit is usable by real users as a standalone tool.
 ### 2.4 Documentation
 - [x] Update README with working examples (CLI commands table, artifact tree, domain table)
 - [x] Quick-start tutorial (init -> onboard -> compile -> export, updated for LLM interview)
-- [ ] Video walkthrough
 - [x] Adapter-specific guides (docs/adapters/ — Claude Code, Manus, OpenClaw, Autopilots)
 - [x] Fix docs formatting (remove triple-quote wrapping from 6 docs files)
 - [x] Update domains.md (all 5 domains fully implemented, not stubs)
 - [x] Flesh out example projects (minimal-agent, content-agent, newsletter-agent)
-
-### 2.5 Release
-- [ ] npm publish @tastekit/core and @tastekit/cli
-- [ ] GitHub release with changelog
-- [ ] Announce to relevant communities
 
 ---
 
@@ -114,7 +107,6 @@ Goal: Minimal viable AutoClaw fork with TasteKit artifact loading and MCP.
 ### 3.1 Foundation
 - [ ] Fork PicoClaw repository
 - [ ] Set up Go module structure
-- [ ] CI/CD pipeline
 - [ ] Rename and rebrand (avoid "Claw" in name)
 
 ### 3.2 TasteKit Artifact Loading
@@ -171,11 +163,37 @@ Goal: Production-grade monitoring. Ship AutoClaw v1.0.
 - [ ] Random assignment, metric tracking
 - [ ] Statistical significance calculation
 
-### 5.3 Polish & Launch
+### 5.3 Polish
 - [ ] Comprehensive documentation
 - [ ] Example workflows
 - [ ] Migration guides from PicoClaw and OpenClaw
-- [ ] Launch
+
+---
+
+# Release & Polish
+
+After first versions of TasteKit, AutoClaw, and autoManage are working together — use all three for a week, fix low-hanging improvements, then release.
+
+## R.1: CI & Infrastructure
+- [ ] CI pipeline runs TasteKit tests on PR
+- [ ] CI/CD for AutoClaw (Go tests, builds)
+- [ ] CI for autoManage (Next.js build, lint)
+
+## R.2: TasteKit Release
+- [ ] npm publish @tastekit/core and @tastekit/cli
+- [ ] GitHub release with changelog
+- [ ] Video walkthrough
+- [ ] Announce to relevant communities
+
+## R.3: AutoClaw Release
+- [ ] GitHub release with changelog
+- [ ] Binary distribution
+- [ ] Launch announcement
+
+## R.4: autoManage Release
+- [ ] npm publish or Docker image
+- [ ] GitHub release with changelog
+- [ ] Setup guide
 
 ---
 
