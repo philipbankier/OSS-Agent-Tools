@@ -1,0 +1,21 @@
+schema_version: bindings.v1
+servers:
+  - name: filesystem
+    url: stdio://mcp-server-filesystem
+    pinned_fingerprint: sha256:abc123
+    tools:
+      - tool_ref: "filesystem:read_file"
+      - tool_ref: "filesystem:write_file"
+        risk_hints: ["data-loss"]
+        default_permission_scope_id: content-write
+    resources:
+      - resource_ref: "filesystem:workspace"
+        uri_pattern: "file://workspace/**"
+    last_bind_at: "2026-02-18T10:00:00Z"
+  - name: web-search
+    url: stdio://mcp-server-brave-search
+    auth:
+      api_key_ref: "env:BRAVE_API_KEY"
+    tools:
+      - tool_ref: "web-search:search"
+    last_bind_at: "2026-02-18T10:00:00Z"

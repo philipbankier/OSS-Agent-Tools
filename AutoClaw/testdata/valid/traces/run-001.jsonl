@@ -1,0 +1,6 @@
+{"schema_version":"trace_event.v1","run_id":"run-001","timestamp":"2026-02-18T10:00:00Z","actor":"user","event_type":"plan","data":{"task":"Write a blog post about AI agents"}}
+{"schema_version":"trace_event.v1","run_id":"run-001","timestamp":"2026-02-18T10:00:01Z","actor":"agent","event_type":"think","skill_id":"content-writer","data":{"thought":"I should research recent developments first."}}
+{"schema_version":"trace_event.v1","run_id":"run-001","timestamp":"2026-02-18T10:00:02Z","actor":"agent","event_type":"tool_call","skill_id":"content-writer","tool_ref":"web-search:search","input_hash":"sha256:aaa","risk_score":0.1,"cost":{"tokens":50,"time_ms":200}}
+{"schema_version":"trace_event.v1","run_id":"run-001","timestamp":"2026-02-18T10:00:03Z","actor":"system","event_type":"tool_result","tool_ref":"web-search:search","output_hash":"sha256:bbb","cost":{"time_ms":1500}}
+{"schema_version":"trace_event.v1","run_id":"run-001","timestamp":"2026-02-18T10:00:10Z","actor":"agent","event_type":"artifact_written","data":{"path":"drafts/ai-agents-blog.md"},"principle_refs":["p-clarity","p-evidence"]}
+{"schema_version":"trace_event.v1","run_id":"run-001","timestamp":"2026-02-18T10:00:11Z","actor":"agent","event_type":"error","error":"Rate limit exceeded for web-search:search"}

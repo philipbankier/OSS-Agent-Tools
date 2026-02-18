@@ -1,0 +1,29 @@
+schema_version: guardrails.v1
+permissions:
+  - scope_id: content-read
+    tool_ref: filesystem:read_file
+    resources: ["workspace/**"]
+    ops: ["read"]
+  - scope_id: content-write
+    tool_ref: filesystem:write_file
+    resources: ["workspace/drafts/**"]
+    ops: ["read", "write"]
+approvals:
+  - rule_id: publish-approval
+    when: "tool_ref == 'social:publish'"
+    action: require_approval
+    channel: cli
+  - rule_id: delete-block
+    when: "tool_ref == 'filesystem:delete'"
+    action: block
+    channel: cli
+rate_limits:
+  - tool_ref: web_search
+    limit: 100
+    window: 1h
+  - tool_ref: "social:*"
+    limit: 10
+    window: 1d
+rollback:
+  playbook_ref: rollback-content
+  notes: "Reverts last published content and notifies stakeholders."

@@ -1,0 +1,42 @@
+schema_version: evalpack.v1
+id: tone-eval
+name: Tone Evaluation
+description: Evaluates whether content matches the user's voice and tone preferences.
+scenarios:
+  - scenario_id: formal-email
+    name: Formal Email Test
+    description: Tests that agent produces professional email tone.
+    setup:
+      inputs:
+        task: "Write a follow-up email to a client"
+        context: "B2B software sales"
+      resources: ["filesystem:workspace/templates"]
+      context: "Client expressed interest in Q1 demo."
+    expected:
+      rubrics: ["tone-match", "professionalism"]
+      thresholds:
+        tone-match: 0.8
+        professionalism: 0.9
+      required_outputs: ["email_subject", "email_body"]
+  - scenario_id: casual-tweet
+    name: Casual Tweet Test
+    description: Tests that agent produces conversational social media tone.
+    setup:
+      inputs:
+        task: "Write a tweet about our new feature launch"
+    expected:
+      rubrics: ["tone-match", "engagement"]
+      thresholds:
+        tone-match: 0.7
+        engagement: 0.6
+judging:
+  rules:
+    - rule_id: tone-regex
+      type: regex
+      pattern: "(?i)(synergy|circle back|touch base)"
+      weight: 0.3
+    - rule_id: tone-llm
+      type: llm_judge
+      template: "Rate how well this output matches voice keywords: {{voice_keywords}}"
+      weight: 0.7
+  output_format: json

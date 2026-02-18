@@ -1,6 +1,6 @@
 # Project Roadmap & Status
 
-Last updated: 2026-02-17
+Last updated: 2026-02-18
 
 This roadmap has two parallel tracks:
 - **Track A**: TasteKit + AutoClaw (taste compiler → agent runtime)
@@ -100,32 +100,44 @@ Goal: TasteKit is feature-complete as a standalone tool.
 
 ---
 
-## Phase 3: Start AutoClaw Development
+## Phase 3: Start AutoClaw Development (IN PROGRESS)
 
-Goal: Minimal viable AutoClaw fork with TasteKit artifact loading and MCP.
+Goal: Fork PicoClaw + TasteKit integration + MCP + drift detection.
 
 ### 3.1 Foundation
-- [ ] Fork PicoClaw repository
-- [ ] Set up Go module structure
-- [ ] Rename and rebrand (avoid "Claw" in name)
+- [x] Fork PicoClaw repository into AutoClaw
+- [x] Rename picoclaw → autoclaw throughout codebase (module path, imports, config, workspace)
+- [x] Create `internal/` directory structure for new packages
+- [x] Extend config with TasteKit and multi-agent routing fields
+- [x] Multi-agent routing scaffold with OpenClaw's 8-tier binding resolution (`internal/routing/`)
+- [x] Session key format adopts OpenClaw pattern from day one (`agent:<id>:<rest>`)
+- [ ] Full binary build (blocked on Go 1.25 for telego dependency)
 
 ### 3.2 TasteKit Artifact Loading
-- [ ] Read `.tastekit/` artifacts (JSON/YAML) in Go
-- [ ] Generate PicoClaw workspace files (AGENTS.md, IDENTITY.md, SOUL.md, USER.md) from artifacts
-- [ ] Migration utility for existing PicoClaw users
-- [ ] No Node.js dependency - static artifact loading only
+- [x] Go structs for all 9 TasteKit artifact types (`internal/artifact/`) — 21 tests
+- [x] `LoadWorkspace()` loads constitution (JSON, required) + optional YAML artifacts
+- [x] Validation: required fields, enum values, float ranges
+- [x] Generate PicoClaw workspace files (SOUL.md, IDENTITY.md, AGENTS.md, USER.md, TOOLS.md) from artifacts (`internal/workspace/`) — 9 tests
+- [x] Migration utility: `MigrateFromPicoClaw()` reads flat markdown → minimal ConstitutionV1
+- [x] No Node.js dependency — static artifact loading only
 
 ### 3.3 MCP Integration (Go)
-- [ ] Use official Go MCP SDK (`github.com/modelcontextprotocol/go-sdk`)
-- [ ] Replace PicoClaw custom tools with MCP protocol
-- [ ] Trust management (pinning, auditing)
+- [x] MCP client interface + MockClient for testing (`internal/mcpclient/`)
+- [x] MCPBridgeTool implements PicoClaw's `Tool` interface — zero agent loop changes (`pkg/tools/mcp.go`) — 9 tests
+- [x] File-based server registry (`.mcp/servers.json`)
+- [x] Trust manager with fingerprint pinning (strict/warn modes)
+- [x] Auditor cross-references trust policy vs registry — 18 tests total
+- [ ] Wire real MCP Go SDK behind the Client interface (deferred to Go 1.25)
 - [ ] Wrap existing PicoClaw tools as MCP servers for backward compatibility
 
 ### 3.4 Basic Drift Detection
-- [ ] Port drift detector logic to Go
-- [ ] Weekly drift analysis of working memory
-- [ ] Drift proposal generation and review CLI
-- [ ] Accept/reject proposals with version bumps
+- [x] Port drift detector logic to Go (`internal/drift/`) — matches TasteKit TypeScript algorithms
+- [x] Detection: repeated rejections + error accumulation, threshold ≥3, risk rating (low/medium/high)
+- [x] Proposal store: file-based persistence with accept/reject workflow
+- [x] Memory consolidation: retention by age/salience, Jaccard similarity merge (≥0.6)
+- [x] Tokenizer + similarity utilities — 27 tests total
+- [ ] Wire into cron system for weekly drift analysis
+- [ ] CLI commands (detect, review, accept, reject)
 
 ---
 

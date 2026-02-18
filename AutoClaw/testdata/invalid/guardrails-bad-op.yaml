@@ -1,0 +1,8 @@
+schema_version: guardrails.v1
+permissions:
+  - scope_id: test
+    tool_ref: filesystem:read_file
+    resources: ["*"]
+    ops: ["read", "nuke"]
+approvals: []
+rate_limits: []

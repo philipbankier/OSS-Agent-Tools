@@ -1,0 +1,17 @@
+schema_version: skills_manifest.v1
+skills:
+  - skill_id: content-writer
+    name: Content Writer
+    description: Writes blog posts and social media content.
+    tags: ["content", "writing", "social-media"]
+    risk_level: low
+    required_tools: ["filesystem:write_file"]
+    compatible_runtimes: ["autoclaw", "claude-code"]
+    playbook_ref: content-pipeline
+  - skill_id: code-reviewer
+    name: Code Reviewer
+    description: Reviews pull requests for style, bugs, and security.
+    tags: ["code", "review", "security"]
+    risk_level: med
+    required_tools: ["filesystem:read_file", "web-search:search"]
+    compatible_runtimes: ["autoclaw"]

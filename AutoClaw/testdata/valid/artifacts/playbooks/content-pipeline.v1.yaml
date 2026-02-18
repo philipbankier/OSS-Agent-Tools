@@ -1,0 +1,52 @@
+schema_version: playbook.v1
+id: content-pipeline
+name: Content Pipeline
+description: Research, write, review, and publish content.
+triggers:
+  - type: cron
+    schedule: "0 9 * * 1"
+  - type: manual
+inputs:
+  - name: topic
+    type: string
+    required: true
+    description: The topic to write about.
+  - name: word_count
+    type: number
+    required: false
+    description: Target word count.
+steps:
+  - step_id: research
+    type: tool
+    tool_ref: "web-search:search"
+    params_template:
+      query: "{{topic}} latest trends"
+    outputs: ["research_results"]
+  - step_id: outline
+    type: think
+    params_template:
+      prompt: "Create an outline based on {{research_results}}"
+    outputs: ["outline"]
+  - step_id: draft
+    type: write
+    params_template:
+      template: "article"
+      outline: "{{outline}}"
+    outputs: ["draft"]
+  - step_id: review-gate
+    type: approval_gate
+checks:
+  - check_id: tone-check
+    type: taste
+    condition: "matches_voice_keywords"
+  - check_id: facts-check
+    type: facts
+    condition: "all_claims_cited"
+    rubric_ref: fact-accuracy
+stop_conditions:
+  - condition: "research_results == empty"
+    reason: "No research results found for the given topic."
+escalations:
+  - escalation_id: esc-publish
+    trigger: "step == 'review-gate'"
+    approval_ref: publish-approval
