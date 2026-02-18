@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/chzyer/readline"
+	"github.com/philipbankier/autoclaw/internal/cli"
 	"github.com/philipbankier/autoclaw/pkg/agent"
 	"github.com/philipbankier/autoclaw/pkg/auth"
 	"github.com/philipbankier/autoclaw/pkg/bus"
@@ -191,6 +192,12 @@ func main() {
 			fmt.Printf("Unknown skills command: %s\n", subcommand)
 			skillsHelp()
 		}
+	case "drift":
+		driftCmd()
+	case "mcp":
+		mcpCmd()
+	case "import-taste":
+		importTasteCmd()
 	case "version", "--version", "-v":
 		printVersion()
 	default:
@@ -205,15 +212,18 @@ func printHelp() {
 	fmt.Println("Usage: autoclaw <command>")
 	fmt.Println()
 	fmt.Println("Commands:")
-	fmt.Println("  onboard     Initialize autoclaw configuration and workspace")
-	fmt.Println("  agent       Interact with the agent directly")
-	fmt.Println("  auth        Manage authentication (login, logout, status)")
-	fmt.Println("  gateway     Start autoclaw gateway")
-	fmt.Println("  status      Show autoclaw status")
-	fmt.Println("  cron        Manage scheduled tasks")
-	fmt.Println("  migrate     Migrate from OpenClaw to AutoClaw")
-	fmt.Println("  skills      Manage skills (install, list, remove)")
-	fmt.Println("  version     Show version information")
+	fmt.Println("  onboard       Initialize autoclaw configuration and workspace")
+	fmt.Println("  agent         Interact with the agent directly")
+	fmt.Println("  auth          Manage authentication (login, logout, status)")
+	fmt.Println("  gateway       Start autoclaw gateway")
+	fmt.Println("  status        Show autoclaw status")
+	fmt.Println("  cron          Manage scheduled tasks")
+	fmt.Println("  drift         Detect and manage behavioral drift")
+	fmt.Println("  mcp           Manage MCP servers and trust")
+	fmt.Println("  import-taste  Import TasteKit artifacts into workspace")
+	fmt.Println("  migrate       Migrate from OpenClaw to AutoClaw")
+	fmt.Println("  skills        Manage skills (install, list, remove)")
+	fmt.Println("  version       Show version information")
 }
 
 func onboard() {
@@ -1000,6 +1010,18 @@ func setupCronTool(agentLoop *agent.AgentLoop, msgBus *bus.MessageBus, workspace
 
 	// Set the onJob handler
 	cronService.SetOnJob(func(job *cron.CronJob) (string, error) {
+		// Handle drift-detect cron jobs.
+		if cli.IsDriftDetectJob(job) {
+			cfg, err := loadConfig()
+			if err != nil {
+				return "", fmt.Errorf("load config for drift: %w", err)
+			}
+			tastekitDir := cli.ResolveTasteKitDir(cfg)
+			if err := cli.DriftDetectCmd(tastekitDir, "", ""); err != nil {
+				return "", err
+			}
+			return "drift detection complete", nil
+		}
 		result := cronTool.ExecuteJob(context.Background(), job)
 		return result, nil
 	})
@@ -1424,4 +1446,190 @@ func skillsShowCmd(loader *skills.SkillsLoader, skillName string) {
 	fmt.Printf("\n📦 Skill: %s\n", skillName)
 	fmt.Println("----------------------")
 	fmt.Println(content)
+}
+
+// --- Drift commands ---
+
+func driftCmd() {
+	if len(os.Args) < 3 {
+		driftHelp()
+		return
+	}
+
+	subcommand := os.Args[2]
+
+	cfg, err := loadConfig()
+	if err != nil {
+		fmt.Printf("Error loading config: %v\n", err)
+		return
+	}
+
+	tastekitDir := cli.ResolveTasteKitDir(cfg)
+
+	switch subcommand {
+	case "detect":
+		since := ""
+		skillID := ""
+		args := os.Args[3:]
+		for i := 0; i < len(args); i++ {
+			switch args[i] {
+			case "--since":
+				if i+1 < len(args) {
+					since = args[i+1]
+					i++
+				}
+			case "--skill":
+				if i+1 < len(args) {
+					skillID = args[i+1]
+					i++
+				}
+			}
+		}
+		if err := cli.DriftDetectCmd(tastekitDir, since, skillID); err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+		}
+	case "review":
+		if err := cli.DriftReviewCmd(tastekitDir); err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+		}
+	case "accept":
+		if len(os.Args) < 4 {
+			fmt.Println("Usage: autoclaw drift accept <proposal-id>")
+			return
+		}
+		if err := cli.DriftAcceptCmd(tastekitDir, os.Args[3]); err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+		}
+	case "reject":
+		if len(os.Args) < 4 {
+			fmt.Println("Usage: autoclaw drift reject <proposal-id>")
+			return
+		}
+		if err := cli.DriftRejectCmd(tastekitDir, os.Args[3]); err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+		}
+	case "cron-setup":
+		schedule := "0 3 * * 0" // default: weekly Sunday 3 AM
+		if len(os.Args) >= 4 {
+			schedule = os.Args[3]
+		}
+		cronStorePath := filepath.Join(cfg.WorkspacePath(), "cron", "jobs.json")
+		if err := cli.SetupDriftCronJob(cronStorePath, tastekitDir, schedule); err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+		}
+	default:
+		fmt.Printf("Unknown drift command: %s\n", subcommand)
+		driftHelp()
+	}
+}
+
+func driftHelp() {
+	fmt.Println("\nDrift commands:")
+	fmt.Println("  detect              Run drift detection on trace events")
+	fmt.Println("  review              List pending drift proposals")
+	fmt.Println("  accept <id>         Accept a drift proposal")
+	fmt.Println("  reject <id>         Reject a drift proposal")
+	fmt.Println("  cron-setup [expr]   Set up recurring drift detection (default: weekly)")
+	fmt.Println()
+	fmt.Println("Detect options:")
+	fmt.Println("  --since YYYY-MM-DD  Only analyze events after this date")
+	fmt.Println("  --skill ID          Filter to a specific skill")
+}
+
+// --- MCP commands ---
+
+func mcpCmd() {
+	if len(os.Args) < 3 {
+		mcpHelp()
+		return
+	}
+
+	subcommand := os.Args[2]
+
+	cfg, err := loadConfig()
+	if err != nil {
+		fmt.Printf("Error loading config: %v\n", err)
+		return
+	}
+
+	mcpDir := cli.ResolveMCPDir(cfg)
+	tastekitDir := cli.ResolveTasteKitDir(cfg)
+
+	switch subcommand {
+	case "list":
+		if err := cli.MCPListCmd(mcpDir); err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+		}
+	case "pin":
+		if len(os.Args) < 5 {
+			fmt.Println("Usage: autoclaw mcp pin <server-name> <fingerprint> [--mode strict|warn]")
+			return
+		}
+		serverName := os.Args[3]
+		fingerprint := os.Args[4]
+		mode := "strict"
+		if len(os.Args) >= 7 && os.Args[5] == "--mode" {
+			mode = os.Args[6]
+		}
+		if err := cli.MCPPinCmd(mcpDir, serverName, fingerprint, mode); err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+		}
+	case "audit":
+		if err := cli.MCPAuditCmd(mcpDir, tastekitDir); err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+		}
+	default:
+		fmt.Printf("Unknown mcp command: %s\n", subcommand)
+		mcpHelp()
+	}
+}
+
+func mcpHelp() {
+	fmt.Println("\nMCP commands:")
+	fmt.Println("  list                       List registered MCP servers")
+	fmt.Println("  pin <name> <fp> [--mode]   Pin a server fingerprint (strict|warn)")
+	fmt.Println("  audit                      Audit MCP trust vs TasteKit policy")
+}
+
+// --- Import-taste command ---
+
+func importTasteCmd() {
+	cfg, err := loadConfig()
+	if err != nil {
+		fmt.Printf("Error loading config: %v\n", err)
+		return
+	}
+
+	tastekitDir := cli.ResolveTasteKitDir(cfg)
+	workspaceDir := cfg.WorkspacePath()
+
+	// Parse flags.
+	args := os.Args[2:]
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--dir":
+			if i+1 < len(args) {
+				tastekitDir = args[i+1]
+				i++
+			}
+		case "--workspace":
+			if i+1 < len(args) {
+				workspaceDir = args[i+1]
+				i++
+			}
+		}
+	}
+
+	if err := cli.ImportTasteCmd(tastekitDir, workspaceDir); err != nil {
+		fmt.Printf("Error: %v\n", err)
+		os.Exit(1)
+	}
 }

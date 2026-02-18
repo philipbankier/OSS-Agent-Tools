@@ -127,8 +127,8 @@ Goal: Fork PicoClaw + TasteKit integration + MCP + drift detection.
 - [x] File-based server registry (`.mcp/servers.json`)
 - [x] Trust manager with fingerprint pinning (strict/warn modes)
 - [x] Auditor cross-references trust policy vs registry — 18 tests total
+- [x] Wrap existing PicoClaw tools as MCP ToolInfo for discovery (`internal/mcpclient/builtin_wrapper.go`) — 2 tests
 - [ ] Wire real MCP Go SDK behind the Client interface (deferred to Go 1.25)
-- [ ] Wrap existing PicoClaw tools as MCP servers for backward compatibility
 
 ### 3.4 Basic Drift Detection
 - [x] Port drift detector logic to Go (`internal/drift/`) — matches TasteKit TypeScript algorithms
@@ -136,8 +136,18 @@ Goal: Fork PicoClaw + TasteKit integration + MCP + drift detection.
 - [x] Proposal store: file-based persistence with accept/reject workflow
 - [x] Memory consolidation: retention by age/salience, Jaccard similarity merge (≥0.6)
 - [x] Tokenizer + similarity utilities — 27 tests total
-- [ ] Wire into cron system for weekly drift analysis
-- [ ] CLI commands (detect, review, accept, reject)
+- [x] Wire into cron system for weekly drift analysis (`internal/cli/driftcron.go`)
+- [x] CLI commands: detect, review, accept, reject, cron-setup (`internal/cli/drift.go`) — 16 tests
+
+### 3.5 CLI Layer
+- [x] `autoclaw drift detect [--since] [--skill]` — load traces, run detector, save proposals
+- [x] `autoclaw drift review` — list pending proposals with risk badges
+- [x] `autoclaw drift accept/reject <id>` — update proposal status
+- [x] `autoclaw drift cron-setup [expr]` — register recurring drift detection
+- [x] `autoclaw mcp list` — display registered MCP servers
+- [x] `autoclaw mcp pin <name> <fp> [--mode]` — create/update trust pins
+- [x] `autoclaw mcp audit` — cross-reference trust policy vs registry
+- [x] `autoclaw import-taste [--dir] [--workspace]` — load artifacts, generate workspace markdown
 
 ---
 
