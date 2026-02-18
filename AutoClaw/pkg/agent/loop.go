@@ -44,6 +44,7 @@ type AgentLoop struct {
 	running        atomic.Bool
 	summarizing    sync.Map // Tracks which sessions are currently being summarized
 	channelManager *channels.Manager
+	toolResultHook func(toolName string, isError bool) // Optional hook for performance tracking
 }
 
 // processOptions configures how a message is processed
@@ -206,6 +207,18 @@ func (al *AgentLoop) RegisterTool(tool tools.Tool) {
 
 func (al *AgentLoop) SetChannelManager(cm *channels.Manager) {
 	al.channelManager = cm
+}
+
+// SetMemoryProvider replaces the default flat memory with a custom MemoryProvider
+// (e.g. TieredMemoryStore). This must be called before processing any messages.
+func (al *AgentLoop) SetMemoryProvider(m MemoryProvider) {
+	al.contextBuilder.SetMemory(m)
+}
+
+// SetToolResultHook registers a callback invoked after each tool execution.
+// Used for performance tracking (recording tool success/failure metrics).
+func (al *AgentLoop) SetToolResultHook(fn func(toolName string, isError bool)) {
+	al.toolResultHook = fn
 }
 
 // RecordLastChannel records the last active channel for this workspace.
@@ -666,6 +679,11 @@ func (al *AgentLoop) runLLMIteration(ctx context.Context, messages []providers.M
 			}
 
 			toolResult := al.tools.ExecuteWithContext(ctx, tc.Name, tc.Arguments, opts.Channel, opts.ChatID, asyncCallback)
+
+			// Performance tracking hook (records tool success/failure for tiered memory).
+			if al.toolResultHook != nil {
+				al.toolResultHook(tc.Name, toolResult.Err != nil)
+			}
 
 			// Send ForUser content to user immediately if not Silent
 			if !toolResult.Silent && toolResult.ForUser != "" && opts.SendResponse {

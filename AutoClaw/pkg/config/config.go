@@ -60,9 +60,11 @@ type Config struct {
 // When ArtifactsDir is set, AutoClaw loads compiled artifacts and generates
 // workspace markdown from structured data instead of flat files.
 type TasteKitConfig struct {
-	ArtifactsDir  string `json:"artifacts_dir" env:"AUTOCLAW_TASTEKIT_ARTIFACTS_DIR"`   // e.g. ".tastekit"
-	DriftSchedule string `json:"drift_schedule" env:"AUTOCLAW_TASTEKIT_DRIFT_SCHEDULE"` // cron expr, e.g. "0 3 * * 0"
-	DriftEnabled  bool   `json:"drift_enabled" env:"AUTOCLAW_TASTEKIT_DRIFT_ENABLED"`
+	ArtifactsDir          string `json:"artifacts_dir" env:"AUTOCLAW_TASTEKIT_ARTIFACTS_DIR"`                     // e.g. ".tastekit"
+	DriftSchedule         string `json:"drift_schedule" env:"AUTOCLAW_TASTEKIT_DRIFT_SCHEDULE"`                   // cron expr, e.g. "0 3 * * 0"
+	DriftEnabled          bool   `json:"drift_enabled" env:"AUTOCLAW_TASTEKIT_DRIFT_ENABLED"`
+	TieredMemory          bool   `json:"tiered_memory" env:"AUTOCLAW_TASTEKIT_TIERED_MEMORY"`                     // opt-in to 4-layer memory
+	ConsolidationSchedule string `json:"consolidation_schedule" env:"AUTOCLAW_TASTEKIT_CONSOLIDATION_SCHEDULE"`   // cron expr for memory consolidation
 }
 
 // RoutingConfig controls multi-agent routing (Phase 4).

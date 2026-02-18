@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/philipbankier/autoclaw/internal/artifact"
+	"github.com/philipbankier/autoclaw/internal/memory"
 	"github.com/philipbankier/autoclaw/internal/workspace"
 )
 
@@ -43,6 +44,14 @@ func ImportTasteCmd(tastekitDir, workspaceDir string) error {
 			return fmt.Errorf("write TOOLS.md: %w", err)
 		}
 		fmt.Println("  - TOOLS.md      (MCP tool bindings)")
+	}
+
+	// Initialize tiered memory directory structure if memory artifact exists.
+	if ws.Memory != nil {
+		if err := memory.InitTieredDirs(workspaceDir, ws); err != nil {
+			return fmt.Errorf("init tiered memory dirs: %w", err)
+		}
+		fmt.Println("  - memory/tiered/ (four-layer memory structure)")
 	}
 
 	return nil

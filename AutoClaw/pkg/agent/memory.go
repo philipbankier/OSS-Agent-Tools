@@ -159,3 +159,14 @@ func (ms *MemoryStore) GetMemoryContext() string {
 	}
 	return fmt.Sprintf("# Memory\n\n%s", result)
 }
+
+// AppendWorkingMemory satisfies MemoryProvider by delegating to AppendToday.
+// In flat mode, salience is ignored.
+func (ms *MemoryStore) AppendWorkingMemory(content string, _ float64) error {
+	return ms.AppendToday(content)
+}
+
+// UpdateLongTermMemory satisfies MemoryProvider by delegating to WriteLongTerm.
+func (ms *MemoryStore) UpdateLongTermMemory(content string) error {
+	return ms.WriteLongTerm(content)
+}

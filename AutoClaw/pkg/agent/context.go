@@ -17,7 +17,7 @@ import (
 type ContextBuilder struct {
 	workspace    string
 	skillsLoader *skills.SkillsLoader
-	memory       *MemoryStore
+	memory       MemoryProvider
 	tools        *tools.ToolRegistry // Direct reference to tool registry
 }
 
@@ -46,6 +46,12 @@ func NewContextBuilder(workspace string) *ContextBuilder {
 // SetToolsRegistry sets the tools registry for dynamic tool summary generation.
 func (cb *ContextBuilder) SetToolsRegistry(registry *tools.ToolRegistry) {
 	cb.tools = registry
+}
+
+// SetMemory replaces the default flat memory store with a custom MemoryProvider.
+// Used to inject TieredMemoryStore when TasteKit is configured.
+func (cb *ContextBuilder) SetMemory(m MemoryProvider) {
+	cb.memory = m
 }
 
 func (cb *ContextBuilder) getIdentity() string {

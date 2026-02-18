@@ -22,7 +22,9 @@ import (
 	"time"
 
 	"github.com/chzyer/readline"
+	"github.com/philipbankier/autoclaw/internal/artifact"
 	"github.com/philipbankier/autoclaw/internal/cli"
+	"github.com/philipbankier/autoclaw/internal/memory"
 	"github.com/philipbankier/autoclaw/pkg/agent"
 	"github.com/philipbankier/autoclaw/pkg/auth"
 	"github.com/philipbankier/autoclaw/pkg/bus"
@@ -194,6 +196,8 @@ func main() {
 		}
 	case "drift":
 		driftCmd()
+	case "memory":
+		memoryCmd()
 	case "mcp":
 		mcpCmd()
 	case "import-taste":
@@ -219,6 +223,7 @@ func printHelp() {
 	fmt.Println("  status        Show autoclaw status")
 	fmt.Println("  cron          Manage scheduled tasks")
 	fmt.Println("  drift         Detect and manage behavioral drift")
+	fmt.Println("  memory        Manage tiered memory (status, consolidate, rollback)")
 	fmt.Println("  mcp           Manage MCP servers and trust")
 	fmt.Println("  import-taste  Import TasteKit artifacts into workspace")
 	fmt.Println("  migrate       Migrate from OpenClaw to AutoClaw")
@@ -418,6 +423,9 @@ func agentCmd() {
 	msgBus := bus.NewMessageBus()
 	agentLoop := agent.NewAgentLoop(cfg, msgBus, provider)
 
+	// Wire tiered memory if TasteKit is configured.
+	wireTieredMemory(agentLoop, cfg)
+
 	// Print agent startup info (only for interactive mode)
 	startupInfo := agentLoop.GetStartupInfo()
 	logger.InfoCF("agent", "Agent initialized",
@@ -552,6 +560,11 @@ func gatewayCmd() {
 
 	msgBus := bus.NewMessageBus()
 	agentLoop := agent.NewAgentLoop(cfg, msgBus, provider)
+
+	// Wire tiered memory if TasteKit is configured.
+	if wireTieredMemory(agentLoop, cfg) {
+		fmt.Println("  • Tiered memory: enabled")
+	}
 
 	// Print agent startup info
 	fmt.Println("\n📦 Agent Status:")
@@ -1027,6 +1040,45 @@ func setupCronTool(agentLoop *agent.AgentLoop, msgBus *bus.MessageBus, workspace
 	})
 
 	return cronService
+}
+
+// wireTieredMemory sets up the tiered memory system on the agent loop when
+// TasteKit is configured with tiered_memory enabled. Returns true if wired.
+func wireTieredMemory(agentLoop *agent.AgentLoop, cfg *config.Config) bool {
+	if !cfg.TasteKit.TieredMemory || cfg.TasteKit.ArtifactsDir == "" {
+		return false
+	}
+
+	ws, err := artifact.LoadWorkspace(cfg.TasteKit.ArtifactsDir)
+	if err != nil {
+		logger.WarnCF("memory", "Failed to load TasteKit workspace for tiered memory",
+			map[string]interface{}{"error": err.Error()})
+		return false
+	}
+
+	store, err := memory.NewTieredMemoryStore(cfg.WorkspacePath(), ws)
+	if err != nil {
+		logger.WarnCF("memory", "Failed to init tiered memory store",
+			map[string]interface{}{"error": err.Error()})
+		return false
+	}
+
+	agentLoop.SetMemoryProvider(store)
+	agentLoop.SetToolResultHook(func(toolName string, isError bool) {
+		if isError {
+			store.Performance.RecordFailure(toolName)
+		} else {
+			store.Performance.RecordSuccess(toolName)
+		}
+		store.Performance.Save()
+	})
+
+	logger.InfoCF("memory", "Tiered memory enabled",
+		map[string]interface{}{
+			"constitution_principles": store.Constitution.PrincipleCount(),
+			"working_entries":         store.Working.EntryCount(),
+		})
+	return true
 }
 
 func loadConfig() (*config.Config, error) {
@@ -1539,6 +1591,92 @@ func driftHelp() {
 	fmt.Println("Detect options:")
 	fmt.Println("  --since YYYY-MM-DD  Only analyze events after this date")
 	fmt.Println("  --skill ID          Filter to a specific skill")
+}
+
+// --- Memory commands ---
+
+func memoryCmd() {
+	if len(os.Args) < 3 {
+		memoryHelp()
+		return
+	}
+
+	subcommand := os.Args[2]
+
+	cfg, err := loadConfig()
+	if err != nil {
+		fmt.Printf("Error loading config: %v\n", err)
+		return
+	}
+
+	tastekitDir := cli.ResolveTasteKitDir(cfg)
+	workspaceDir := cfg.WorkspacePath()
+
+	switch subcommand {
+	case "status":
+		if err := cli.MemoryStatusCmd(workspaceDir, tastekitDir); err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+		}
+	case "consolidate":
+		dryRun := false
+		for _, a := range os.Args[3:] {
+			if a == "--dry-run" {
+				dryRun = true
+			}
+		}
+		if err := cli.MemoryConsolidateCmd(workspaceDir, tastekitDir, dryRun); err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+		}
+	case "rollback":
+		if len(os.Args) < 4 {
+			fmt.Println("Usage: autoclaw memory rollback <version>")
+			return
+		}
+		ver, err := cli.ParseVersion(os.Args[3])
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+			return
+		}
+		if err := cli.MemoryRollbackCmd(workspaceDir, tastekitDir, ver); err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+		}
+	case "diff":
+		if len(os.Args) < 5 {
+			fmt.Println("Usage: autoclaw memory diff <versionA> <versionB>")
+			return
+		}
+		vA, err := cli.ParseVersion(os.Args[3])
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+			return
+		}
+		vB, err := cli.ParseVersion(os.Args[4])
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+			return
+		}
+		if err := cli.MemoryDiffCmd(workspaceDir, tastekitDir, vA, vB); err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+		}
+	default:
+		fmt.Printf("Unknown memory command: %s\n", subcommand)
+		memoryHelp()
+	}
+}
+
+func memoryHelp() {
+	fmt.Println("\nMemory commands:")
+	fmt.Println("  status                Show all memory layer statistics")
+	fmt.Println("  consolidate           Run memory consolidation (prune, merge, promote)")
+	fmt.Println("  rollback <version>    Restore preferences to a snapshot version")
+	fmt.Println("  diff <vA> <vB>        Show differences between preference snapshots")
+	fmt.Println()
+	fmt.Println("Consolidate options:")
+	fmt.Println("  --dry-run             Preview consolidation without applying changes")
 }
 
 // --- MCP commands ---

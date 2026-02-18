@@ -151,17 +151,22 @@ Goal: Fork PicoClaw + TasteKit integration + MCP + drift detection.
 
 ---
 
-## Phase 4: AutoClaw Memory & Orchestration
+## Phase 4: AutoClaw Memory & Orchestration (IN PROGRESS)
 
 Goal: Tiered memory and multi-agent coordination.
 
 ### 4.1 Tiered Memory System
-- [ ] Constitution layer (immutable, from TasteKit)
-- [ ] Preferences layer (semi-mutable, drift-tracked)
-- [ ] Working memory layer (auto-updating, last 30 days)
-- [ ] Performance layer (read-only metrics)
-- [ ] Memory consolidation (working -> preferences)
-- [ ] Memory rollback and diff commands
+- [x] MemoryProvider interface + backward-compatible flat MemoryStore (`pkg/agent/memory_provider.go`)
+- [x] MemoryLayer/WritableLayer interfaces + MemoryEntry types + JSONL helpers (`internal/memory/`)
+- [x] Constitution layer — immutable, from TasteKit ConstitutionV1 (`internal/memory/constitution.go`) — 5 tests
+- [x] Working memory layer — 30-day rolling JSONL window, prune/replace (`internal/memory/working.go`) — 9 tests
+- [x] Preferences layer — versioned snapshots, rollback, diff (`internal/memory/preferences.go`) — 11 tests
+- [x] Performance layer — tool/skill success-failure metrics (`internal/memory/performance.go`) — 6 tests
+- [x] TieredMemoryStore orchestrator — budget-allocated context, 4-layer composition (`internal/memory/tiered.go`) — 7 tests
+- [x] Memory consolidation — prune/merge/promote via drift.Consolidator (`internal/memory/consolidate.go`) — 7 tests
+- [x] Agent loop integration — SetMemoryProvider + performance tracking hook (`pkg/agent/loop.go`)
+- [x] CLI commands: status, consolidate, rollback, diff (`internal/cli/memory.go`, `cmd/autoclaw/main.go`)
+- [x] Import-taste generates tiered memory directory structure (`internal/cli/importtaste.go`)
 
 ### 4.2 Multi-Agent Orchestration
 - [ ] Shared memory pools
