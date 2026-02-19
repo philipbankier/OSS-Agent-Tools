@@ -109,6 +109,10 @@ async function resolveDomainSkills(domainId?: string): Promise<DomainSkill[]> {
       const { SupportAgentSkills } = await import('../domains/support-agent/skills/index.js');
       return SupportAgentSkills as DomainSkill[];
     }
+    case 'development-agent': {
+      const { DevelopmentAgentSkills } = await import('../domains/development-agent/skills/index.js');
+      return DevelopmentAgentSkills as DomainSkill[];
+    }
     default:
       return [];
   }

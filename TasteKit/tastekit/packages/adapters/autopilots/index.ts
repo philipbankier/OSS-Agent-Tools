@@ -5,7 +5,7 @@
  */
 
 import { TasteKitAdapter, ExportOpts, InstallOpts } from '../adapter-interface.js';
-import { readFileSync, writeFileSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, cpSync } from 'fs';
 import { join } from 'path';
 
 export class AutopilotsAdapter implements TasteKitAdapter {
@@ -33,8 +33,7 @@ export class AutopilotsAdapter implements TasteKitAdapter {
   
   async install(outDir: string, target: string, opts: InstallOpts): Promise<void> {
     // Simple copy
-    const fs = require('fs');
-    fs.cpSync(outDir, target, { recursive: true });
+    cpSync(outDir, target, { recursive: true });
   }
   
   private generateAutopilotsYAML(constitution: any): string {

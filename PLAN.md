@@ -100,6 +100,38 @@ Goal: TasteKit is feature-complete as a standalone tool.
 
 ---
 
+## Phase 2.5: arscontexta-Informed Enhancements (IN PROGRESS)
+
+Goal: Absorb best ideas from [arscontexta](https://github.com/agenticnotetaking/arscontexta) to make TasteKit maximally useful. See detailed plan in `.claude/plans/proud-purring-moler.md`.
+
+### Phase A: Foundation
+- [x] Fix ESM/CJS bugs in claude-code and autopilots adapters
+- [x] Add development-agent skills (code-review, refactor-plan) and wire into compiler
+- [ ] Implement DerivationState schema + read/write (context resilience protocol)
+- [ ] Implement three-space workspace layout (self/, knowledge/, ops/) + migration
+- [ ] Rewrite compiler with derivation-first, new paths, and `--resume` support
+
+### Phase C: Intelligence
+- [ ] Confidence-weighted signal extraction in interviewer (replaces binary coverage)
+- [ ] Cascade resolution between rubric dimensions
+- [ ] Add observation/tension event types to trace schema
+- [ ] Implement all 7 drift signal types + observation/tension aggregation
+- [ ] Type all `any` fields in drift proposals
+
+### Phase B: Output
+- [ ] Compositional CLAUDE.md generator (7 mandatory + 4 conditional blocks)
+- [ ] Enhanced hooks generator (4 lifecycle scripts + guard)
+- [ ] Vocabulary transformation for all 5 domains
+- [ ] Rewrite Claude Code adapter to generate CLAUDE.md + hooks
+
+### Phase D: Skill Graph
+- [ ] Skill relationship fields (prerequisites, feeds_into, alternatives, pipeline_phase)
+- [ ] Skill graph analyzer (density, orphans, pipelines, cycles)
+- [ ] `tastekit skills graph` CLI command
+- [ ] Wire pipeline relationships into generated CLAUDE.md skills section
+
+---
+
 ## Phase 3: Start AutoClaw Development (IN PROGRESS)
 
 Goal: Fork PicoClaw + TasteKit integration + MCP + drift detection.

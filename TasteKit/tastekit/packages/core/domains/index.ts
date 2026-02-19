@@ -56,3 +56,4 @@ export * from './content-agent/index.js';
 export * from './research-agent/index.js';
 export * from './sales-agent/index.js';
 export * from './support-agent/index.js';
+export * from './development-agent/index.js';

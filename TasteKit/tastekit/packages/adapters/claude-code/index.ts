@@ -5,7 +5,7 @@
  */
 
 import { TasteKitAdapter, ExportOpts, InstallOpts } from '../adapter-interface.js';
-import { readFileSync, writeFileSync, cpSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, cpSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 
 export class ClaudeCodeAdapter implements TasteKitAdapter {
@@ -34,7 +34,7 @@ export class ClaudeCodeAdapter implements TasteKitAdapter {
     // Write to output directory
     const claudeDir = join(outDir, '.claude');
     if (!existsSync(claudeDir)) {
-      require('fs').mkdirSync(claudeDir, { recursive: true });
+      mkdirSync(claudeDir, { recursive: true });
     }
     
     writeFileSync(
