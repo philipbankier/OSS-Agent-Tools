@@ -25,6 +25,15 @@ export const SalesAgentDomain: DomainDefinition = {
     'web-search',
   ],
   default_autonomy_level: 0.5,
+  vocabulary: {
+    principles_heading: 'Sales Principles',
+    guardrails_heading: 'Deal Guardrails',
+    skills_heading: 'Sales Plays',
+    constitution_label: 'Sales Playbook',
+    skill_label: 'Play',
+    playbook_label: 'Deal Flow',
+    drift_verb: 'Strategy drift',
+  },
 };
 
 export const SALES_METHODOLOGIES = [

@@ -12,6 +12,9 @@ export const ResponseDraftSkill = {
   risk_level: 'med' as const,
   required_tools: [],
   compatible_runtimes: ['claude-code', 'openclaw', 'manus'],
+  prerequisites: ['ticket-triage'],
+  pipeline_phase: 'process',
+  context_model: 'inherit' as const,
 
   skill_md_content: `# Response Draft
 

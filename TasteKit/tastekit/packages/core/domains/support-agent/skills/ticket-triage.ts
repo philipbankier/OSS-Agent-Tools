@@ -12,6 +12,9 @@ export const TicketTriageSkill = {
   risk_level: 'low' as const,
   required_tools: ['ticket-system'],
   compatible_runtimes: ['claude-code', 'openclaw', 'manus'],
+  feeds_into: ['response-draft'],
+  pipeline_phase: 'capture',
+  context_model: 'inherit' as const,
 
   skill_md_content: `# Ticket Triage
 

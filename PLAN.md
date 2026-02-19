@@ -1,6 +1,6 @@
 # Project Roadmap & Status
 
-Last updated: 2026-02-18
+Last updated: 2026-02-19
 
 This roadmap has two parallel tracks:
 - **Track A**: TasteKit + AutoClaw (taste compiler → agent runtime)
@@ -100,35 +100,35 @@ Goal: TasteKit is feature-complete as a standalone tool.
 
 ---
 
-## Phase 2.5: arscontexta-Informed Enhancements (IN PROGRESS)
+## Phase 2.5: arscontexta-Informed Enhancements (COMPLETE)
 
 Goal: Absorb best ideas from [arscontexta](https://github.com/agenticnotetaking/arscontexta) to make TasteKit maximally useful. See detailed plan in `.claude/plans/proud-purring-moler.md`.
 
-### Phase A: Foundation
+### Phase A: Foundation (COMPLETE)
 - [x] Fix ESM/CJS bugs in claude-code and autopilots adapters
 - [x] Add development-agent skills (code-review, refactor-plan) and wire into compiler
-- [ ] Implement DerivationState schema + read/write (context resilience protocol)
-- [ ] Implement three-space workspace layout (self/, knowledge/, ops/) + migration
-- [ ] Rewrite compiler with derivation-first, new paths, and `--resume` support
+- [x] Implement DerivationState schema + read/write (context resilience protocol)
+- [x] Implement three-space workspace layout (self/, knowledge/, ops/) + migration
+- [x] Rewrite compiler with derivation-first, new paths, and `--resume` support
 
-### Phase C: Intelligence
-- [ ] Confidence-weighted signal extraction in interviewer (replaces binary coverage)
-- [ ] Cascade resolution between rubric dimensions
-- [ ] Add observation/tension event types to trace schema
-- [ ] Implement all 7 drift signal types + observation/tension aggregation
-- [ ] Type all `any` fields in drift proposals
+### Phase C: Intelligence (COMPLETE)
+- [x] Confidence-weighted signal extraction in interviewer (replaces binary coverage)
+- [x] Cascade resolution between rubric dimensions
+- [x] Add observation/tension event types to trace schema
+- [x] Implement all 7 drift signal types + observation/tension aggregation
+- [x] Type all `any` fields in drift proposals
 
-### Phase B: Output
-- [ ] Compositional CLAUDE.md generator (7 mandatory + 4 conditional blocks)
-- [ ] Enhanced hooks generator (4 lifecycle scripts + guard)
-- [ ] Vocabulary transformation for all 5 domains
-- [ ] Rewrite Claude Code adapter to generate CLAUDE.md + hooks
+### Phase B: Output (COMPLETE)
+- [x] Compositional CLAUDE.md generator (7 mandatory + 4 conditional blocks)
+- [x] Enhanced hooks generator (5 lifecycle scripts including guard)
+- [x] Vocabulary transformation for all 5 domains
+- [x] Rewrite Claude Code adapter to generate CLAUDE.md + hooks (v2.0.0)
 
-### Phase D: Skill Graph
-- [ ] Skill relationship fields (prerequisites, feeds_into, alternatives, pipeline_phase)
-- [ ] Skill graph analyzer (density, orphans, pipelines, cycles)
-- [ ] `tastekit skills graph` CLI command
-- [ ] Wire pipeline relationships into generated CLAUDE.md skills section
+### Phase D: Skill Graph (COMPLETE)
+- [x] Skill relationship fields (prerequisites, feeds_into, alternatives, pipeline_phase, context_model, model_hint)
+- [x] Skill graph analyzer (density, orphans, hubs, pipelines, cycles, missing refs)
+- [x] `tastekit skills graph` CLI command
+- [x] Wire pipeline relationships into generated CLAUDE.md skills section
 
 ---
 
@@ -272,6 +272,7 @@ These are ideas worth tracking but not committed to any phase:
 - [ ] Trademark verification for "TasteKit" name
 - [ ] Naming decision for AutoClaw (avoid "Claw")
 - [ ] Trace file pruning (`tastekit traces prune` CLI command)
+- [ ] Quick-start preset system (`tastekit init --quick` with domain preset defaults)
 - [ ] Approval timeout in guardrails schema (`timeout_seconds` field)
 - [ ] TracerStream decorator for EventEmitter-based streaming (v1.1 autoManage integration)
 

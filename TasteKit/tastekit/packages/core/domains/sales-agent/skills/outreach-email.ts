@@ -12,6 +12,9 @@ export const OutreachEmailSkill = {
   risk_level: 'med' as const,
   required_tools: ['email-sender'],
   compatible_runtimes: ['claude-code', 'openclaw', 'manus'],
+  prerequisites: ['lead-qualification'],
+  pipeline_phase: 'process',
+  context_model: 'inherit' as const,
 
   skill_md_content: `# Outreach Email
 

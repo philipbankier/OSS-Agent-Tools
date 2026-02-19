@@ -12,6 +12,9 @@ export const WebResearchSkill = {
   risk_level: 'low' as const,
   required_tools: ['web-search'],
   compatible_runtimes: ['claude-code', 'openclaw', 'manus'],
+  feeds_into: ['competitive-analysis'],
+  pipeline_phase: 'capture',
+  context_model: 'inherit' as const,
 
   skill_md_content: `# Web Research
 

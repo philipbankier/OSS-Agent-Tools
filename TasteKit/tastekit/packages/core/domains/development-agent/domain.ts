@@ -25,4 +25,13 @@ export const DevelopmentAgentDomain: DomainDefinition = {
     'test-runner',
   ],
   default_autonomy_level: 0.6,
+  vocabulary: {
+    principles_heading: 'Engineering Standards',
+    guardrails_heading: 'Safety Guardrails',
+    skills_heading: 'Dev Workflows',
+    constitution_label: 'Engineering Handbook',
+    skill_label: 'Workflow',
+    playbook_label: 'Runbook',
+    drift_verb: 'Standards drift',
+  },
 };

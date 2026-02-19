@@ -15,6 +15,20 @@ export const SkillMetadataSchema = z.object({
   required_tools: z.array(z.string()).describe('MCP tool refs required'),
   compatible_runtimes: z.array(z.string()).describe('Compatible runtime adapters'),
   playbook_ref: z.string().optional().describe('Associated playbook reference'),
+
+  // Skill graph relationships
+  /** Skill IDs that should complete before this skill runs */
+  prerequisites: z.array(z.string()).optional(),
+  /** Skill IDs that consume this skill's output */
+  feeds_into: z.array(z.string()).optional(),
+  /** Skill IDs that serve the same purpose (choose one) */
+  alternatives: z.array(z.string()).optional(),
+  /** Pipeline phase: where this skill fits in a multi-step workflow */
+  pipeline_phase: z.string().optional().describe('"capture", "process", "connect", "verify"'),
+  /** Run in current context or spawn fresh subagent */
+  context_model: z.enum(['inherit', 'fork']).optional(),
+  /** Suggested model for this skill */
+  model_hint: z.string().optional().describe('"sonnet" for fast, "opus" for deep analysis'),
 });
 
 export const SkillsManifestV1Schema = z.object({

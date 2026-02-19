@@ -10,3 +10,4 @@ export * from './guardrails-compiler.js';
 export * from './memory-compiler.js';
 export * from './skills-compiler.js';
 export * from './playbook-compiler.js';
+export * from './derivation.js';

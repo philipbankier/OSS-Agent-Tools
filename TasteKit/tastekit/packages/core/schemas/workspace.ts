@@ -42,11 +42,39 @@ export const InterviewTurnSchema = z.object({
 });
 
 /**
- * Dimension coverage tracking
+ * Confidence signal — a single piece of evidence from a conversation turn.
+ * Accumulates toward the dimension's confidence threshold (default 1.5).
+ */
+export const SignalSchema = z.object({
+  /** Weight: HIGH=1.0, MED=0.6, LOW=0.3, INFERRED=0.2 */
+  weight: z.number(),
+  /** How the signal was derived */
+  source: z.enum(['explicit', 'implicit', 'inferred', 'anti']),
+  /** Which turn produced this signal */
+  turn_number: z.number(),
+  /** Optional excerpt from the conversation that produced this signal */
+  excerpt: z.string().optional(),
+});
+
+/**
+ * Dimension coverage tracking — with confidence-weighted signal extraction.
+ *
+ * Backward compatible: old sessions without confidence/signals still work
+ * because all new fields have defaults.
  */
 export const DimensionCoverageSchema = z.object({
   dimension_id: z.string(),
   status: z.enum(['not_started', 'in_progress', 'covered', 'skipped']),
+
+  /** Cumulative confidence score (sum of signal weights) */
+  confidence: z.number().min(0).default(0),
+  /** Confidence threshold for resolution (default 1.5) */
+  confidence_threshold: z.number().default(1.5),
+  /** Signal history — each observation that contributed to this dimension */
+  signals: z.array(SignalSchema).default([]),
+  /** Explicit negatives — things the user said they do NOT want */
+  anti_signals: z.array(z.string()).default([]),
+
   summary: z.string().optional(),
   extracted_facts: z.array(z.string()).optional(),
   relevant_turns: z.array(z.number()),
@@ -104,3 +132,4 @@ export type SessionState = z.infer<typeof SessionStateSchema>;
 export type InterviewTurn = z.infer<typeof InterviewTurnSchema>;
 export type DimensionCoverage = z.infer<typeof DimensionCoverageSchema>;
 export type InterviewState = z.infer<typeof InterviewStateSchema>;
+export type Signal = z.infer<typeof SignalSchema>;

@@ -22,6 +22,9 @@ export const UNIVERSAL_DIMENSIONS: RubricDimension[] = [
       'At least one success metric or criteria identified',
       'Context for why this matters to them',
     ],
+    cascade_to: [
+      { dimension_id: 'guiding_principles', weight: 0.2 },
+    ],
   },
   {
     id: 'guiding_principles',
@@ -39,6 +42,9 @@ export const UNIVERSAL_DIMENSIONS: RubricDimension[] = [
       'At least 2-3 distinct principles identified',
       'Rationale understood for each',
       'Priority ordering established (at guided+ depth)',
+    ],
+    cascade_to: [
+      { dimension_id: 'communication_tone', weight: 0.15 },
     ],
   },
   {
@@ -76,6 +82,9 @@ export const UNIVERSAL_DIMENSIONS: RubricDimension[] = [
       'At least one escalation scenario identified',
       'Risk tolerance direction clear',
     ],
+    cascade_to: [
+      { dimension_id: 'hard_boundaries', weight: 0.3, condition: 'Strong autonomy preference implies specific boundary needs' },
+    ],
   },
   {
     id: 'accuracy_evidence',
@@ -93,6 +102,9 @@ export const UNIVERSAL_DIMENSIONS: RubricDimension[] = [
       'Accuracy/speed tradeoff positioned',
       'Citation expectations set',
       'Uncertainty language preference expressed',
+    ],
+    cascade_to: [
+      { dimension_id: 'hard_boundaries', weight: 0.15, condition: 'Evidence standards hint at safety boundaries' },
     ],
   },
   {

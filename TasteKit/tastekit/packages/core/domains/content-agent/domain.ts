@@ -5,6 +5,18 @@
  * and audience engagement.
  */
 
+export interface DomainVocabulary {
+  principles_heading?: string;
+  guardrails_heading?: string;
+  skills_heading?: string;
+  constitution_label?: string;
+  skill_label?: string;
+  playbook_label?: string;
+  compile_verb?: string;
+  drift_verb?: string;
+  custom?: Record<string, string>;
+}
+
 export interface DomainDefinition {
   id: string;
   name: string;
@@ -13,6 +25,7 @@ export interface DomainDefinition {
   use_cases: string[];
   recommended_tools: string[];
   default_autonomy_level: number;
+  vocabulary?: DomainVocabulary;
 }
 
 export const ContentAgentDomain: DomainDefinition = {
@@ -34,6 +47,15 @@ export const ContentAgentDomain: DomainDefinition = {
     'file-system', // For managing content assets
   ],
   default_autonomy_level: 0.6, // Moderate autonomy for content creation
+  vocabulary: {
+    principles_heading: 'Brand Voice Rules',
+    guardrails_heading: 'Content Policies',
+    skills_heading: 'Content Workflows',
+    constitution_label: 'Brand Guidelines',
+    skill_label: 'Workflow',
+    playbook_label: 'Campaign',
+    drift_verb: 'Brand drift',
+  },
 };
 
 export const CONTENT_PLATFORMS = [

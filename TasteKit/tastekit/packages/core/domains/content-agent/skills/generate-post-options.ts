@@ -12,6 +12,9 @@ export const GeneratePostOptionsSkill = {
   risk_level: 'low' as const,
   required_tools: [],
   compatible_runtimes: ['claude-code', 'openclaw', 'manus'],
+  prerequisites: ['research-trends'],
+  pipeline_phase: 'process',
+  context_model: 'inherit' as const,
   
   skill_md_content: `# Generate Post Options
 

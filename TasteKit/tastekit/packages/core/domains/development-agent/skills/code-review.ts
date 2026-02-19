@@ -12,6 +12,9 @@ export const CodeReviewSkill = {
   risk_level: 'low' as const,
   required_tools: ['file-system'],
   compatible_runtimes: ['claude-code', 'openclaw', 'manus'],
+  feeds_into: ['refactor-plan'],
+  pipeline_phase: 'verify',
+  context_model: 'inherit' as const,
 
   skill_md_content: `# Code Review
 

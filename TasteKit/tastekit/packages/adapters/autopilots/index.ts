@@ -7,6 +7,7 @@
 import { TasteKitAdapter, ExportOpts, InstallOpts } from '../adapter-interface.js';
 import { readFileSync, writeFileSync, existsSync, cpSync } from 'fs';
 import { join } from 'path';
+import { resolveArtifactPath } from '@tastekit/core/utils/filesystem.js';
 
 export class AutopilotsAdapter implements TasteKitAdapter {
   id = 'autopilots';
@@ -17,8 +18,9 @@ export class AutopilotsAdapter implements TasteKitAdapter {
   }
   
   async export(profilePath: string, outDir: string, opts: ExportOpts): Promise<void> {
-    const constitutionPath = join(profilePath, 'artifacts', 'constitution.v1.json');
-    
+    // Supports both v1 flat and v2 three-space layouts
+    const constitutionPath = resolveArtifactPath(profilePath, 'constitution');
+
     if (!existsSync(constitutionPath)) {
       throw new Error('Constitution not found. Run tastekit compile first.');
     }

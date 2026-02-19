@@ -25,6 +25,15 @@ export const SupportAgentDomain: DomainDefinition = {
     'screen-reader',
   ],
   default_autonomy_level: 0.4,
+  vocabulary: {
+    principles_heading: 'Support Policies',
+    guardrails_heading: 'Escalation Rules',
+    skills_heading: 'Support Procedures',
+    constitution_label: 'Support Handbook',
+    skill_label: 'Procedure',
+    playbook_label: 'Resolution Flow',
+    drift_verb: 'Policy drift',
+  },
 };
 
 export const SUPPORT_CHANNELS = [

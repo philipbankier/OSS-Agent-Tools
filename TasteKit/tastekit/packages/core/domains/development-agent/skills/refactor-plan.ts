@@ -12,6 +12,9 @@ export const RefactorPlanSkill = {
   risk_level: 'med' as const,
   required_tools: ['file-system'],
   compatible_runtimes: ['claude-code', 'openclaw', 'manus'],
+  prerequisites: ['code-review'],
+  pipeline_phase: 'process',
+  context_model: 'inherit' as const,
 
   skill_md_content: `# Refactor Plan
 

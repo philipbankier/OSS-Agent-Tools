@@ -12,6 +12,9 @@ export const ResearchTrendsSkill = {
   risk_level: 'low' as const,
   required_tools: ['web-search'],
   compatible_runtimes: ['claude-code', 'openclaw', 'manus'],
+  feeds_into: ['generate-post-options'],
+  pipeline_phase: 'capture',
+  context_model: 'inherit' as const,
   
   skill_md_content: `# Research Trends
 

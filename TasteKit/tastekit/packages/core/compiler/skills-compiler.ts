@@ -1,5 +1,5 @@
 import { join } from 'path';
-import { writeFileSafe } from '../utils/filesystem.js';
+import { writeFileSafe, resolveSkillsPath } from '../utils/filesystem.js';
 import { stringifyYAML } from '../utils/yaml.js';
 import { SkillsManifestV1, SkillMetadata } from '../schemas/skills.js';
 import { ConstitutionV1 } from '../schemas/constitution.js';
@@ -33,7 +33,7 @@ export interface SkillsCompilationOptions {
  */
 export async function compileSkills(options: SkillsCompilationOptions): Promise<string[]> {
   const { workspacePath, session, constitution } = options;
-  const skillsPath = join(workspacePath, 'skills');
+  const skillsPath = resolveSkillsPath(workspacePath);
   const artifacts: string[] = [];
 
   // Resolve domain skills

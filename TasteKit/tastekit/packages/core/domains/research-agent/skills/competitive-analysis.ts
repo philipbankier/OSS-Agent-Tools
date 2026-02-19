@@ -12,6 +12,9 @@ export const CompetitiveAnalysisSkill = {
   risk_level: 'low' as const,
   required_tools: ['web-search'],
   compatible_runtimes: ['claude-code', 'openclaw', 'manus'],
+  prerequisites: ['web-research'],
+  pipeline_phase: 'process',
+  context_model: 'inherit' as const,
 
   skill_md_content: `# Competitive Analysis
 

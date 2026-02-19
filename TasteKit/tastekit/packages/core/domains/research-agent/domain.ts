@@ -25,6 +25,15 @@ export const ResearchAgentDomain: DomainDefinition = {
     'data-analysis',
   ],
   default_autonomy_level: 0.7,
+  vocabulary: {
+    principles_heading: 'Research Standards',
+    guardrails_heading: 'Ethics & Rigor',
+    skills_heading: 'Research Methods',
+    constitution_label: 'Research Principles',
+    skill_label: 'Method',
+    playbook_label: 'Study Protocol',
+    drift_verb: 'Methodology drift',
+  },
 };
 
 export const RESEARCH_OUTPUT_FORMATS = [

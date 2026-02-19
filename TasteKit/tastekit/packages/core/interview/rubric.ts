@@ -45,6 +45,19 @@ export const RubricDimensionSchema = z.object({
 
   /** Optional sub-areas for deeper probing at operator depth. */
   sub_areas: z.array(z.string()).optional(),
+
+  /**
+   * Cascade relationships: when this dimension resolves, propagate
+   * INFERRED signals to related dimensions.
+   */
+  cascade_to: z.array(z.object({
+    /** Target dimension ID to cascade to */
+    dimension_id: z.string(),
+    /** Inferred confidence weight (default 0.2) */
+    weight: z.number().default(0.2),
+    /** Optional condition for the cascade */
+    condition: z.string().optional(),
+  })).optional(),
 });
 
 export type RubricDimension = z.infer<typeof RubricDimensionSchema>;

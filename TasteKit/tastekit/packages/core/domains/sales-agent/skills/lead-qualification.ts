@@ -12,6 +12,9 @@ export const LeadQualificationSkill = {
   risk_level: 'low' as const,
   required_tools: [],
   compatible_runtimes: ['claude-code', 'openclaw', 'manus'],
+  feeds_into: ['outreach-email'],
+  pipeline_phase: 'capture',
+  context_model: 'inherit' as const,
 
   skill_md_content: `# Lead Qualification
 

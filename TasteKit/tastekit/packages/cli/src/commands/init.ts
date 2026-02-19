@@ -96,15 +96,18 @@ export const initCommand = new Command('init')
         llmConfig = await promptForProvider();
       }
 
-      // Create workspace structure
+      // Create workspace structure (three-space layout)
       const createSpinner = ora('Creating workspace...').start();
       mkdirSync(workspacePath, { recursive: true });
-      mkdirSync(join(workspacePath, 'artifacts'), { recursive: true });
-      mkdirSync(join(workspacePath, 'artifacts', 'playbooks'), { recursive: true });
-      mkdirSync(join(workspacePath, 'artifacts', 'evalpacks'), { recursive: true });
-      mkdirSync(join(workspacePath, 'skills'), { recursive: true });
-      mkdirSync(join(workspacePath, 'traces'), { recursive: true });
-      mkdirSync(join(workspacePath, 'compiled'), { recursive: true });
+
+      // Three-space layout: self/ (identity), knowledge/ (skills/playbooks), ops/ (traces/drift/sessions)
+      mkdirSync(join(workspacePath, 'self'), { recursive: true });
+      mkdirSync(join(workspacePath, 'knowledge', 'skills'), { recursive: true });
+      mkdirSync(join(workspacePath, 'knowledge', 'playbooks'), { recursive: true });
+      mkdirSync(join(workspacePath, 'ops', 'traces'), { recursive: true });
+      mkdirSync(join(workspacePath, 'ops', 'drift'), { recursive: true });
+      mkdirSync(join(workspacePath, 'ops', 'observations'), { recursive: true });
+      mkdirSync(join(workspacePath, 'ops', 'sessions'), { recursive: true });
 
       // Create tastekit.yaml with domain and LLM config
       const config: Record<string, unknown> = {

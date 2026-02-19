@@ -5,7 +5,9 @@ import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { lintSkills } from '@tastekit/core/skills';
 import { packSkills } from '@tastekit/core/skills';
-import { getGlobalOptions, riskColor, header, hint, table, handleError, jsonOutput } from '../ui.js';
+import { analyzeSkillGraph } from '@tastekit/core/skills';
+import { resolveSkillsPath } from '@tastekit/core/utils/filesystem';
+import { getGlobalOptions, riskColor, header, detail, hint, table, handleError, jsonOutput } from '../ui.js';
 
 const skillsListCommand = new Command('list')
   .description('List all skills')
@@ -135,8 +137,104 @@ const skillsPackCommand = new Command('pack')
     }
   });
 
+const skillsGraphCommand = new Command('graph')
+  .description('Analyze skill relationships and pipelines')
+  .action(async (_options, cmd) => {
+    const globals = getGlobalOptions(cmd);
+    const workspacePath = join(process.cwd(), '.tastekit');
+    const skillsDir = resolveSkillsPath(workspacePath);
+    const manifestPath = join(skillsDir, 'manifest.v1.yaml');
+
+    if (!existsSync(manifestPath)) {
+      if (globals.json) jsonOutput({ error: 'No skills manifest found' });
+      console.log(chalk.gray('No skills manifest found.'));
+      hint('tastekit compile', 'generate skills');
+      return;
+    }
+
+    try {
+      const YAML = await import('yaml');
+      const manifest = YAML.parse(readFileSync(manifestPath, 'utf-8'));
+
+      if (!manifest.skills || manifest.skills.length === 0) {
+        if (globals.json) jsonOutput({ graph: { node_count: 0 } });
+        console.log(chalk.gray('No skills defined.'));
+        return;
+      }
+
+      const analysis = analyzeSkillGraph(manifest);
+
+      if (globals.json) {
+        jsonOutput(analysis);
+      }
+
+      header('Skill Graph Analysis');
+
+      detail('Nodes', String(analysis.node_count));
+      detail('Edges', String(analysis.edge_count));
+      detail('Density', analysis.density.toFixed(3));
+      console.log('');
+
+      // Pipelines
+      if (analysis.pipelines.length > 0) {
+        console.log(chalk.bold('  Pipelines'));
+        for (const pipeline of analysis.pipelines) {
+          console.log(chalk.cyan('    ' + pipeline.join(' → ')));
+        }
+        console.log('');
+      }
+
+      // Hubs
+      if (analysis.hubs.length > 0) {
+        console.log(chalk.bold('  Hubs') + chalk.gray(' (3+ connections)'));
+        for (const hub of analysis.hubs) {
+          console.log(chalk.yellow('    ' + hub));
+        }
+        console.log('');
+      }
+
+      // Orphans
+      if (analysis.orphans.length > 0) {
+        console.log(chalk.bold('  Orphans') + chalk.gray(' (no relationships)'));
+        for (const orphan of analysis.orphans) {
+          console.log(chalk.gray('    ' + orphan));
+        }
+        console.log('');
+      }
+
+      // Cycles (warnings)
+      if (analysis.cycles.length > 0) {
+        console.log(chalk.red.bold('  Cycles') + chalk.red(' (circular dependencies)'));
+        for (const cycle of analysis.cycles) {
+          console.log(chalk.red('    ' + cycle.join(' → ') + ' → ' + cycle[0]));
+        }
+        console.log('');
+      }
+
+      // Missing refs (warnings)
+      if (analysis.missing_refs.length > 0) {
+        console.log(chalk.yellow.bold('  Missing References'));
+        for (const ref of analysis.missing_refs) {
+          console.log(chalk.yellow(`    ${ref.skill_id} → ${ref.missing_ref} (${ref.relationship})`));
+        }
+        console.log('');
+      }
+
+      // Summary line
+      const issues = analysis.cycles.length + analysis.missing_refs.length;
+      if (issues === 0) {
+        console.log(chalk.green('  No issues found.'));
+      } else {
+        console.log(chalk.yellow(`  ${issues} issue(s) found.`));
+      }
+    } catch (error) {
+      handleError(error);
+    }
+  });
+
 export const skillsCommand = new Command('skills')
   .description('Manage skills library')
   .addCommand(skillsListCommand)
   .addCommand(skillsLintCommand)
-  .addCommand(skillsPackCommand);
+  .addCommand(skillsPackCommand)
+  .addCommand(skillsGraphCommand);

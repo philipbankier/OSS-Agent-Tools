@@ -1,5 +1,5 @@
 import { join } from 'path';
-import { writeFileSafe } from '../utils/filesystem.js';
+import { writeFileSafe, resolvePlaybooksPath } from '../utils/filesystem.js';
 import { stringifyYAML } from '../utils/yaml.js';
 import { PlaybookV1, PlaybookStep } from '../schemas/playbook.js';
 import { ConstitutionV1 } from '../schemas/constitution.js';
@@ -26,7 +26,7 @@ export interface PlaybookCompilationOptions {
  */
 export async function compilePlaybooks(options: PlaybookCompilationOptions): Promise<string[]> {
   const { workspacePath, session, constitution } = options;
-  const playbooksPath = join(workspacePath, 'playbooks');
+  const playbooksPath = resolvePlaybooksPath(workspacePath);
   const artifacts: string[] = [];
 
   // Resolve domain playbooks
