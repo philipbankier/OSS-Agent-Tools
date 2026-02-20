@@ -88,6 +88,7 @@ export const InterviewStateSchema = z.object({
   dimension_coverage: z.array(DimensionCoverageSchema),
   is_complete: z.boolean(),
   turn_count: z.number(),
+  structured_answers: z.any().optional(),
 });
 
 /**

@@ -3,6 +3,8 @@ import chalk from 'chalk';
 import ora from 'ora';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
+import YAML from 'yaml';
+import { resolveArtifactPath, resolveSkillsPath } from '@tastekit/core/utils';
 import { detail, hint, handleError } from '../ui.js';
 
 const ADAPTERS: Record<string, string> = {
@@ -31,7 +33,7 @@ export const exportCommand = new Command('export')
       process.exit(1);
     }
 
-    const constitutionPath = join(tastekitDir, 'artifacts', 'constitution.v1.json');
+    const constitutionPath = resolveArtifactPath(tastekitDir, 'constitution');
     if (!existsSync(constitutionPath)) {
       console.error(chalk.red('No compiled artifacts found. Run `tastekit compile` first.'));
       process.exit(1);
@@ -41,12 +43,12 @@ export const exportCommand = new Command('export')
     if (options.target === 'agent-file') {
       const spinner = ora('Generating Agent File (.af) from TasteKit artifacts...').start();
       try {
-        const constitution = JSON.parse(readFileSync(constitutionPath, 'utf-8'));
+        const constitution = parseYamlOrJson(constitutionPath);
 
         // Read guardrails if available
-        const guardrailsPath = join(tastekitDir, 'artifacts', 'guardrails.v1.json');
+        const guardrailsPath = resolveArtifactPath(tastekitDir, 'guardrails');
         const guardrails = existsSync(guardrailsPath)
-          ? JSON.parse(readFileSync(guardrailsPath, 'utf-8'))
+          ? parseYamlOrJson(guardrailsPath)
           : null;
 
         const af = generateAgentFile(constitution, guardrails);
@@ -65,7 +67,7 @@ export const exportCommand = new Command('export')
     if (options.target === 'agents-md') {
       const spinner = ora('Generating AGENTS.md from TasteKit artifacts...').start();
       try {
-        const constitution = JSON.parse(readFileSync(constitutionPath, 'utf-8'));
+        const constitution = parseYamlOrJson(constitutionPath);
         const agentsMd = generateAgentsMd(constitution, tastekitDir);
         const outPath = join(options.out === './export' ? workspacePath : options.out, 'AGENTS.md');
         mkdirSync(join(outPath, '..'), { recursive: true });
@@ -109,23 +111,33 @@ export const exportCommand = new Command('export')
 async function loadAdapter(target: string): Promise<any> {
   switch (target) {
     case 'claude-code': {
-      const mod = await import('../../../../adapters/claude-code/index.js');
+      const mod = await import('@tastekit/adapters/claude-code');
       return mod.ClaudeCodeAdapter;
     }
     case 'manus': {
-      const mod = await import('../../../../adapters/manus/index.js');
+      const mod = await import('@tastekit/adapters/manus');
       return mod.ManusAdapter;
     }
     case 'openclaw': {
-      const mod = await import('../../../../adapters/openclaw/index.js');
+      const mod = await import('@tastekit/adapters/openclaw');
       return mod.OpenClawAdapter;
     }
     case 'autopilots': {
-      const mod = await import('../../../../adapters/autopilots/index.js');
+      const mod = await import('@tastekit/adapters/autopilots');
       return mod.AutopilotsAdapter;
     }
     default:
       throw new Error(`Unknown adapter: ${target}`);
+  }
+}
+
+function parseYamlOrJson(path: string): any {
+  const content = readFileSync(path, 'utf-8');
+
+  try {
+    return JSON.parse(content);
+  } catch {
+    return YAML.parse(content);
   }
 }
 
@@ -185,7 +197,7 @@ function generateAgentsMd(constitution: any, tastekitDir: string): string {
   }
 
   // Skills reference
-  const skillsManifestPath = join(tastekitDir, 'skills', 'manifest.v1.yaml');
+  const skillsManifestPath = join(resolveSkillsPath(tastekitDir), 'manifest.v1.yaml');
   if (existsSync(skillsManifestPath)) {
     lines.push('## Skills');
     lines.push('');

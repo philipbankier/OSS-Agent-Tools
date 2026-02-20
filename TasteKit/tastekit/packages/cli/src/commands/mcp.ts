@@ -12,7 +12,7 @@ interface MCPServerRegistry {
     args?: string[];
     env?: Record<string, string>;
     url?: string;
-    transport?: string;
+    transport?: 'stdio' | 'streamable-http';
     pinned?: boolean;
     added_at: string;
   }>;

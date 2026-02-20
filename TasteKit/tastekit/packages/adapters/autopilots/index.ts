@@ -7,7 +7,7 @@
 import { TasteKitAdapter, ExportOpts, InstallOpts } from '../adapter-interface.js';
 import { readFileSync, writeFileSync, existsSync, cpSync } from 'fs';
 import { join } from 'path';
-import { resolveArtifactPath } from '@tastekit/core/utils/filesystem.js';
+import { resolveArtifactPath } from '@tastekit/core/utils';
 
 export class AutopilotsAdapter implements TasteKitAdapter {
   id = 'autopilots';

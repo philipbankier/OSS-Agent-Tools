@@ -5,12 +5,10 @@ import inquirer from 'inquirer';
 import chalk from 'chalk';
 import ora from 'ora';
 import YAML from 'yaml';
-import { createSession, loadSession, saveSession } from '@tastekit/core/interview/session.js';
-import { Interviewer } from '@tastekit/core/interview/interviewer.js';
-import { resolveProvider, autoDetectProvider } from '@tastekit/core/llm/resolve.js';
-import { getDomainRubric } from '@tastekit/core/domains/index.js';
-import { DomainRubric } from '@tastekit/core/interview/rubric.js';
-import { WorkspaceConfig, InterviewState } from '@tastekit/core/schemas/workspace.js';
+import { createSession, loadSession, saveSession, Interviewer, DomainRubric } from '@tastekit/core/interview';
+import { resolveProvider, autoDetectProvider } from '@tastekit/core/llm';
+import { getDomainRubric } from '@tastekit/core/domains';
+import { WorkspaceConfig, InterviewState } from '@tastekit/core/schemas';
 import { detail, hint, handleError } from '../ui.js';
 
 export const onboardCommand = new Command('onboard')

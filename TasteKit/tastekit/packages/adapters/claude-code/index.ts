@@ -10,10 +10,11 @@
 import { TasteKitAdapter, ExportOpts, InstallOpts } from '../adapter-interface.js';
 import { readFileSync, writeFileSync, cpSync, existsSync, mkdirSync, chmodSync } from 'fs';
 import { join } from 'path';
-import { resolveArtifactPath, resolveSkillsPath } from '@tastekit/core/utils/filesystem.js';
-import { generateClaudeMd } from '@tastekit/core/generators/claude-md-generator.js';
-import { generateHooks } from '@tastekit/core/generators/hooks-generator.js';
-import type { GeneratorContext } from '@tastekit/core/generators/types.js';
+import { createRequire } from 'node:module';
+import { resolveArtifactPath, resolveSkillsPath } from '@tastekit/core/utils';
+import { generateClaudeMd, generateHooks, type GeneratorContext } from '@tastekit/core/generators';
+
+const require = createRequire(import.meta.url);
 
 function tryParseYamlOrJson(filePath: string): any {
   const content = readFileSync(filePath, 'utf-8');
@@ -23,7 +24,6 @@ function tryParseYamlOrJson(filePath: string): any {
   } catch { /* not JSON */ }
   // Try YAML via dynamic import fallback
   try {
-    // yaml package is a dependency of the project
     const YAML = require('yaml');
     return YAML.parse(content);
   } catch { /* skip */ }

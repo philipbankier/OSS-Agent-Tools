@@ -6,7 +6,7 @@ import { join } from 'path';
 import { lintSkills } from '@tastekit/core/skills';
 import { packSkills } from '@tastekit/core/skills';
 import { analyzeSkillGraph } from '@tastekit/core/skills';
-import { resolveSkillsPath } from '@tastekit/core/utils/filesystem';
+import { resolveSkillsPath } from '@tastekit/core/utils';
 import { getGlobalOptions, riskColor, header, detail, hint, table, handleError, jsonOutput } from '../ui.js';
 
 const skillsListCommand = new Command('list')

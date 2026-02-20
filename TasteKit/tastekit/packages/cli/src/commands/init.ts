@@ -5,8 +5,8 @@ import chalk from 'chalk';
 import ora from 'ora';
 import inquirer from 'inquirer';
 import YAML from 'yaml';
-import { listDomains, getDomainRubric } from '@tastekit/core/domains/index.js';
-import { autoDetectProvider, LLMProviderConfig } from '@tastekit/core/llm/index.js';
+import { listDomains, getDomainRubric } from '@tastekit/core/domains';
+import { autoDetectProvider, LLMProviderConfig } from '@tastekit/core/llm';
 import { detail, hint, handleError } from '../ui.js';
 
 export const initCommand = new Command('init')

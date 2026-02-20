@@ -36,3 +36,6 @@ workspace/sessions/
 
 # Logs
 *.log
+
+# Local AI session placeholders
+AutoClaw-Planning-Documentation/CLAUDE.md

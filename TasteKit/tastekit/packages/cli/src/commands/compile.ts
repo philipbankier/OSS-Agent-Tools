@@ -3,10 +3,9 @@ import { existsSync } from 'fs';
 import { join } from 'path';
 import chalk from 'chalk';
 import ora from 'ora';
-import { compile } from '@tastekit/core/compiler/compiler.js';
-import { canResume } from '@tastekit/core/compiler/derivation.js';
-import { loadSession } from '@tastekit/core/interview/session.js';
-import { resolveSessionPath, detectLayoutVersion } from '@tastekit/core/utils/filesystem.js';
+import { compile, canResume } from '@tastekit/core/compiler';
+import { loadSession } from '@tastekit/core/interview';
+import { resolveSessionPath, detectLayoutVersion } from '@tastekit/core/utils';
 import { getGlobalOptions, nextSteps, handleError, jsonOutput } from '../ui.js';
 
 export const compileCommand = new Command('compile')
