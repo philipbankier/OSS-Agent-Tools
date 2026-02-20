@@ -1,0 +1,18 @@
+spawn sh -lc cd '/Users/philipbankier/Development/OSS/Taste OSS/OSS-Agent-Tools-worktrees/tastekit-validation-wave1/TasteKit/tastekit/fixtures/validation/wave1/domains/development-agent/workspace' && node '/Users/philipbankier/Development/OSS/Taste OSS/OSS-Agent-Tools-worktrees/tastekit-validation-wave1/TasteKit/tastekit/packages/cli/dist/cli.js' onboard
+- Connecting to LLM...
+✔ Connected to ollama
+
+TasteKit Onboarding Interview
+
+Domain: development-agent | Depth: quick | LLM: ollama
+Type /save to save and quit, /skip to skip a topic
+
+
+  Hey there — I’m here to help you set up your AI coding agent so it writes code the way *you* would. No templates, no scripts — just a conversation to get you the right setup.
+
+Let’s start with the big picture: What’s the main goal you’re trying to achieve with this agent? Is it to ship faster, write cleaner code, reduce boilerplate, or something else? What does “success” look like for you?
+
+? You:? You: /? You: /s? You: /sa? You: /sav? You: /save? You: /save? You: /save
+
+  Session saved. Run with --resume to continue later.
+

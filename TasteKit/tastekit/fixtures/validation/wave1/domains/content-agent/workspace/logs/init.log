@@ -1,0 +1,15 @@
+spawn sh -lc cd '/Users/philipbankier/Development/OSS/Taste OSS/OSS-Agent-Tools-worktrees/tastekit-validation-wave1/TasteKit/tastekit/fixtures/validation/wave1/domains/content-agent/workspace' && node '/Users/philipbankier/Development/OSS/Taste OSS/OSS-Agent-Tools-worktrees/tastekit-validation-wave1/TasteKit/tastekit/packages/cli/dist/cli.js' init --domain content-agent --depth quick .
+
+TasteKit Workspace Setup
+
+- Detecting LLM provider...
+✔ Detected LLM provider: ollama
+? Use ollama for onboarding interview? (Y/n)? Use ollama for onboarding interview? yes
+- Creating workspace...
+✔ TasteKit workspace initialized
+
+  Domain: content-agent
+  Depth: quick
+  LLM: ollama
+
+  Run tastekit onboard to start the interview

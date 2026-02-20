@@ -1,0 +1,18 @@
+spawn sh -lc cd '/Users/philipbankier/Development/OSS/Taste OSS/OSS-Agent-Tools-worktrees/tastekit-validation-wave1/TasteKit/tastekit/fixtures/validation/wave1/domains/content-agent/workspace' && node '/Users/philipbankier/Development/OSS/Taste OSS/OSS-Agent-Tools-worktrees/tastekit-validation-wave1/TasteKit/tastekit/packages/cli/dist/cli.js' onboard
+- Connecting to LLM...
+✔ Connected to ollama
+
+TasteKit Onboarding Interview
+
+Domain: content-agent | Depth: quick | LLM: ollama
+Type /save to save and quit, /skip to skip a topic
+
+
+  Hey — thanks for jumping in. I’m here to help you shape your content agent so it feels like an extension of your voice, not a robot. 
+
+Let’s start with the big picture: What’s the main goal you’re trying to achieve with this agent? Think of it like the mission statement — what problem are you solving, or what outcome are you chasing?
+
+? You:? You: /? You: /s? You: /sa? You: /sav? You: /save? You: /save? You: /save
+
+  Session saved. Run with --resume to continue later.
+
