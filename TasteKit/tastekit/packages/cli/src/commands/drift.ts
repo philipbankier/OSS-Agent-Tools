@@ -5,6 +5,7 @@ import { existsSync, readFileSync, writeFileSync, readdirSync, mkdirSync } from 
 import { join } from 'path';
 import { DriftDetector } from '@tastekit/core/drift';
 import { MemoryConsolidator } from '@tastekit/core/drift';
+import { resolveTracesPath } from '@tastekit/core/utils';
 import { getGlobalOptions, riskColor, header, detail, hint, handleError, jsonOutput, verbose } from '../ui.js';
 
 const driftDetectCommand = new Command('detect')
@@ -14,7 +15,8 @@ const driftDetectCommand = new Command('detect')
   .action(async (options, cmd) => {
     const globals = getGlobalOptions(cmd);
     const workspacePath = process.cwd();
-    const tracesDir = join(workspacePath, '.tastekit', 'traces');
+    const tastekitPath = join(workspacePath, '.tastekit');
+    const tracesDir = resolveTracesPath(tastekitPath);
 
     if (!existsSync(tracesDir)) {
       console.log(chalk.yellow('No traces found. Run your agent to generate traces first.'));
