@@ -10,6 +10,9 @@
     "./schemas": "./dist/schemas/index.js",
     "./compiler": "./dist/compiler/index.js",
     "./interview": "./dist/interview/index.js",
+    "./domains": "./dist/domains/index.js",
+    "./llm": "./dist/llm/index.js",
+    "./generators": "./dist/generators/index.js",
     "./skills": "./dist/skills/index.js",
     "./mcp": "./dist/mcp/index.js",
     "./trust": "./dist/trust/index.js",
@@ -25,6 +28,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.26.0",
     "yaml": "^2.4.0",
     "zod": "^3.23.0",
     "ajv": "^8.12.0"

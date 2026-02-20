@@ -1,4 +1,4 @@
-''' text='''# Tracing
+# Tracing
 
 TasteKit is built with a **trace-first** philosophy. This means that every significant action taken by the system or an agent is recorded as a structured, machine-readable event. These traces are the foundation for debugging, evaluation, and drift detection.
 
@@ -48,4 +48,3 @@ tracer.traceToolResult('local-tools:file-writer', { success: true });
 ## Replaying Traces
 
 TasteKit also includes a `Replay` module that can take an existing trace file and "replay" it against a new or updated taste profile. This is a powerful regression testing tool. It allows you to check if a change to your constitution or guardrails would have altered the outcome of a past run, helping you catch unintended consequences before they happen.
-'''

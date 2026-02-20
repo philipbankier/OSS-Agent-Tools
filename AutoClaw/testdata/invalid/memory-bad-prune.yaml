@@ -1,0 +1,13 @@
+schema_version: memory.v1
+runtime_target: test
+stores: []
+write_policy:
+  salience_rules: []
+  pii_handling:
+    detect: false
+    redact: false
+    store_separately: false
+  update_mode: append
+  revisit_triggers: []
+retention_policy:
+  prune_strategy: yolo

@@ -1,87 +1,133 @@
 /**
  * Claude Code Adapter
- * 
- * Exports TasteKit artifacts to Claude Code format.
+ *
+ * Exports TasteKit artifacts to Claude Code format:
+ * - CLAUDE.md (compositional, from generator blocks)
+ * - Hook scripts (session lifecycle)
+ * - settings.local.json (hook configuration)
  */
 
 import { TasteKitAdapter, ExportOpts, InstallOpts } from '../adapter-interface.js';
-import { readFileSync, writeFileSync, cpSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, cpSync, existsSync, mkdirSync, chmodSync } from 'fs';
 import { join } from 'path';
+import { createRequire } from 'node:module';
+import { resolveArtifactPath, resolveSkillsPath } from '@tastekit/core/utils';
+import { generateClaudeMd, generateHooks, type GeneratorContext } from '@tastekit/core/generators';
+
+const require = createRequire(import.meta.url);
+
+function tryParseYamlOrJson(filePath: string): any {
+  const content = readFileSync(filePath, 'utf-8');
+  // Try JSON first (faster, no dependency)
+  try {
+    return JSON.parse(content);
+  } catch { /* not JSON */ }
+  // Try YAML via dynamic import fallback
+  try {
+    const YAML = require('yaml');
+    return YAML.parse(content);
+  } catch { /* skip */ }
+  return null;
+}
 
 export class ClaudeCodeAdapter implements TasteKitAdapter {
   id = 'claude-code';
-  version = '1.0.0';
-  
+  version = '2.0.0';
+
   async detect(target: string): Promise<boolean> {
-    // Check if target has Claude Code configuration
     return existsSync(join(target, '.claude', 'config.json'));
   }
-  
+
   async export(profilePath: string, outDir: string, opts: ExportOpts): Promise<void> {
-    // Read TasteKit artifacts
-    const constitutionPath = join(profilePath, 'artifacts', 'constitution.v1.json');
-    const guardrailsPath = join(profilePath, 'artifacts', 'guardrails.v1.yaml');
-    
-    if (!existsSync(constitutionPath)) {
-      throw new Error('Constitution not found. Run tastekit compile first.');
+    // Build generator context from compiled artifacts
+    const ctx = this.buildContext(profilePath);
+
+    // 1. Generate CLAUDE.md
+    const claudeMd = generateClaudeMd(ctx);
+    writeFileSync(join(outDir, 'CLAUDE.md'), claudeMd);
+
+    // 2. Generate hook scripts
+    const { scripts, manifest } = generateHooks();
+    const hooksDir = join(outDir, '.tastekit', 'hooks');
+    mkdirSync(hooksDir, { recursive: true });
+
+    for (const script of scripts) {
+      const scriptPath = join(hooksDir, script.filename);
+      writeFileSync(scriptPath, script.content);
+      if (script.executable) {
+        chmodSync(scriptPath, 0o755);
+      }
     }
-    
-    const constitution = JSON.parse(readFileSync(constitutionPath, 'utf-8'));
-    
-    // Generate Claude Code hooks configuration
-    const hooksConfig = this.generateHooksConfig(constitution);
-    
-    // Write to output directory
+
+    // 3. Write hooks.json for Claude Code settings
     const claudeDir = join(outDir, '.claude');
-    if (!existsSync(claudeDir)) {
-      require('fs').mkdirSync(claudeDir, { recursive: true });
-    }
-    
+    mkdirSync(claudeDir, { recursive: true });
     writeFileSync(
-      join(claudeDir, 'hooks.json'),
-      JSON.stringify(hooksConfig, null, 2)
+      join(claudeDir, 'settings.local.json'),
+      JSON.stringify(manifest, null, 2),
     );
-    
-    // Copy skills if requested
+
+    // 4. Copy skills if requested
     if (opts.includeSkills) {
-      const skillsPath = join(profilePath, 'skills');
-      if (existsSync(skillsPath)) {
-        cpSync(skillsPath, join(outDir, 'skills'), { recursive: true });
+      const skillsDir = resolveSkillsPath(profilePath);
+      if (existsSync(skillsDir)) {
+        cpSync(skillsDir, join(outDir, 'skills'), { recursive: true });
       }
     }
   }
-  
-  async install(outDir: string, target: string, opts: InstallOpts): Promise<void> {
-    // Copy generated files to target
+
+  async install(outDir: string, target: string, _opts: InstallOpts): Promise<void> {
     cpSync(outDir, target, { recursive: true });
   }
-  
-  private generateHooksConfig(constitution: any): any {
-    return {
-      version: '1.0',
-      principles: constitution.principles.map((p: any) => ({
-        id: p.id,
-        statement: p.statement,
-        priority: p.priority,
-      })),
-      tone: {
-        voice: constitution.tone.voice_keywords.join(', '),
-        forbidden: constitution.tone.forbidden_phrases,
-      },
-      enforcement: {
-        pre_execution: [
-          {
-            hook: 'check_forbidden_phrases',
-            enabled: true,
-          },
-        ],
-        post_execution: [
-          {
-            hook: 'log_trace',
-            enabled: true,
-          },
-        ],
-      },
+
+  private buildContext(profilePath: string): GeneratorContext {
+    const ctx: GeneratorContext = {
+      generator_version: '0.5.0',
     };
+
+    // Constitution
+    const constitutionPath = resolveArtifactPath(profilePath, 'constitution');
+    if (existsSync(constitutionPath)) {
+      ctx.constitution = tryParseYamlOrJson(constitutionPath);
+    }
+
+    // Guardrails
+    const guardrailsPath = resolveArtifactPath(profilePath, 'guardrails');
+    if (existsSync(guardrailsPath)) {
+      ctx.guardrails = tryParseYamlOrJson(guardrailsPath);
+    }
+
+    // Memory
+    const memoryPath = resolveArtifactPath(profilePath, 'memory');
+    if (existsSync(memoryPath)) {
+      ctx.memory = tryParseYamlOrJson(memoryPath);
+    }
+
+    // Skills manifest
+    const skillsDir = resolveSkillsPath(profilePath);
+    const manifestPath = join(skillsDir, 'manifest.v1.yaml');
+    if (existsSync(manifestPath)) {
+      ctx.skills = tryParseYamlOrJson(manifestPath);
+    }
+
+    // Bindings
+    const bindingsPath = join(profilePath, 'bindings.v1.yaml');
+    if (existsSync(bindingsPath)) {
+      ctx.bindings = tryParseYamlOrJson(bindingsPath);
+    }
+
+    // Domain config (check tastekit.yaml for domain_id)
+    const configPath = join(profilePath, 'tastekit.yaml');
+    if (existsSync(configPath)) {
+      const config = tryParseYamlOrJson(configPath);
+      ctx.domain_id = config?.domain_id;
+    }
+
+    // Check for playbooks
+    const playbooksDir = join(profilePath, 'knowledge', 'playbooks');
+    const playbooksV1 = join(profilePath, 'playbooks');
+    ctx.has_playbooks = existsSync(playbooksDir) || existsSync(playbooksV1);
+
+    return ctx;
   }
 }

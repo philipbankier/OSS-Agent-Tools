@@ -2,24 +2,24 @@ import { appendFileSync } from 'fs';
 import { join } from 'path';
 import { TraceEvent } from '../schemas/trace.js';
 import { hashObject } from '../utils/hash.js';
-import { ensureDir } from '../utils/filesystem.js';
+import { ensureDir, resolveTracesPath } from '../utils/filesystem.js';
 
 /**
  * Tracer
- * 
+ *
  * Writes trace events to JSONL files.
  */
 
 export class Tracer {
   private runId: string;
   private tracePath: string;
-  
+
   constructor(workspacePath: string, runId?: string) {
     this.runId = runId || crypto.randomUUID();
-    
-    const tracesDir = join(workspacePath, 'traces');
+
+    const tracesDir = resolveTracesPath(workspacePath);
     ensureDir(tracesDir);
-    
+
     this.tracePath = join(tracesDir, `${this.runId}.trace.v1.jsonl`);
   }
   

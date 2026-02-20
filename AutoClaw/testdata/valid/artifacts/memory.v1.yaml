@@ -1,0 +1,29 @@
+schema_version: memory.v1
+runtime_target: autoclaw
+stores:
+  - store_id: local-fs
+    type: filesystem
+    config:
+      path: "~/.autoclaw/workspace/memory"
+      format: markdown
+write_policy:
+  salience_rules:
+    - rule_id: user-correction
+      pattern: "correction|fix|wrong|actually"
+      score: 0.9
+      reason: "User corrections indicate important preference signals."
+    - rule_id: positive-feedback
+      pattern: "good|great|perfect|exactly"
+      score: 0.6
+  pii_handling:
+    detect: true
+    redact: true
+    store_separately: false
+  update_mode: consolidate
+  consolidation_schedule: "0 3 * * 0"
+  revisit_triggers:
+    - "3+ rejections of same pattern"
+    - "weekly drift check"
+retention_policy:
+  ttl_days: 90
+  prune_strategy: least_salient

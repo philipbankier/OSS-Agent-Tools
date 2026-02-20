@@ -1,56 +1,179 @@
-import { Command } from 'commander';
+import { Command, createOption } from 'commander';
 import { existsSync, mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import chalk from 'chalk';
 import ora from 'ora';
+import inquirer from 'inquirer';
 import YAML from 'yaml';
+import { listDomains, getDomainRubric } from '@tastekit/core/domains';
+import { autoDetectProvider, LLMProviderConfig } from '@tastekit/core/llm';
+import { detail, hint, handleError } from '../ui.js';
 
 export const initCommand = new Command('init')
   .description('Initialize a new TasteKit workspace')
   .argument('[path]', 'Path to initialize workspace', '.')
-  .action(async (path: string) => {
-    const spinner = ora('Initializing TasteKit workspace...').start();
-    
+  .option('--domain <id>', 'Domain ID (skip interactive selection)')
+  .addOption(createOption('--depth <type>', 'Onboarding depth').choices(['quick', 'guided', 'operator']))
+  .action(async (path: string, options: { domain?: string; depth?: string }) => {
     try {
       const workspacePath = join(process.cwd(), path, '.tastekit');
-      
+
       // Check if workspace already exists
       if (existsSync(workspacePath)) {
-        spinner.fail(chalk.red('TasteKit workspace already exists at this location'));
+        console.error(chalk.red('TasteKit workspace already exists at this location.'));
+        console.log(chalk.gray('To reinitialize, delete .tastekit/ first.'));
         process.exit(1);
       }
-      
-      // Create workspace structure
+
+      console.log(chalk.bold.cyan('\nTasteKit Workspace Setup\n'));
+
+      // Domain selection
+      let domainId: string;
+      if (options.domain) {
+        domainId = options.domain;
+      } else {
+        const domains = listDomains();
+        const { selectedDomain } = await inquirer.prompt([{
+          type: 'list',
+          name: 'selectedDomain',
+          message: 'What type of agent are you building?',
+          choices: domains.map(d => ({
+            name: `${d.name}${d.is_stub ? chalk.gray(' (coming soon)') : ''}`,
+            value: d.id,
+            disabled: d.is_stub ? 'Not yet available' : false,
+          })),
+        }]);
+        domainId = selectedDomain;
+      }
+
+      // Check if domain has a rubric
+      const rubric = getDomainRubric(domainId);
+      if (!rubric) {
+        console.log(chalk.yellow(`Note: Domain "${domainId}" doesn't have an interview rubric yet.`));
+        console.log(chalk.yellow('The onboarding will use universal dimensions only.'));
+      }
+
+      // Depth selection
+      let depth: string;
+      if (options.depth) {
+        depth = options.depth;
+      } else {
+        const { selectedDepth } = await inquirer.prompt([{
+          type: 'list',
+          name: 'selectedDepth',
+          message: 'How deep should the onboarding interview go?',
+          choices: [
+            { name: 'Quick (~5 min) - Essential preferences only', value: 'quick' },
+            { name: 'Guided (~15 min) - Thorough profile', value: 'guided' },
+            { name: 'Operator (~30 min) - Deep exploration with examples', value: 'operator' },
+          ],
+          default: 'guided',
+        }]);
+        depth = selectedDepth;
+      }
+
+      // LLM provider detection
+      let llmConfig: LLMProviderConfig | undefined;
+      const detectSpinner = ora('Detecting LLM provider...').start();
+      try {
+        const detected = await autoDetectProvider();
+        detectSpinner.succeed(`Detected LLM provider: ${chalk.bold(detected.provider)}`);
+
+        const { useDetected } = await inquirer.prompt([{
+          type: 'confirm',
+          name: 'useDetected',
+          message: `Use ${detected.provider} for onboarding interview?`,
+          default: true,
+        }]);
+
+        if (useDetected) {
+          llmConfig = detected;
+        } else {
+          llmConfig = await promptForProvider();
+        }
+      } catch {
+        detectSpinner.warn('No LLM provider auto-detected');
+        llmConfig = await promptForProvider();
+      }
+
+      // Create workspace structure (three-space layout)
+      const createSpinner = ora('Creating workspace...').start();
       mkdirSync(workspacePath, { recursive: true });
-      mkdirSync(join(workspacePath, 'artifacts'), { recursive: true });
-      mkdirSync(join(workspacePath, 'artifacts', 'playbooks'), { recursive: true });
-      mkdirSync(join(workspacePath, 'artifacts', 'evalpacks'), { recursive: true });
-      mkdirSync(join(workspacePath, 'skills'), { recursive: true });
-      mkdirSync(join(workspacePath, 'traces'), { recursive: true });
-      mkdirSync(join(workspacePath, 'compiled'), { recursive: true });
-      
-      // Create tastekit.yaml
-      const config = {
+
+      // Three-space layout: self/ (identity), knowledge/ (skills/playbooks), ops/ (traces/drift/sessions)
+      mkdirSync(join(workspacePath, 'self'), { recursive: true });
+      mkdirSync(join(workspacePath, 'knowledge', 'skills'), { recursive: true });
+      mkdirSync(join(workspacePath, 'knowledge', 'playbooks'), { recursive: true });
+      mkdirSync(join(workspacePath, 'ops', 'traces'), { recursive: true });
+      mkdirSync(join(workspacePath, 'ops', 'drift'), { recursive: true });
+      mkdirSync(join(workspacePath, 'ops', 'observations'), { recursive: true });
+      mkdirSync(join(workspacePath, 'ops', 'sessions'), { recursive: true });
+
+      // Create tastekit.yaml with domain and LLM config
+      const config: Record<string, unknown> = {
         version: '1.0.0',
         project_name: 'my-taste-profile',
         created_at: new Date().toISOString(),
+        domain_id: domainId,
+        onboarding: {
+          depth,
+          completed: false,
+        },
       };
-      
+
+      if (llmConfig) {
+        config.llm_provider = llmConfig;
+      }
+
       writeFileSync(
         join(workspacePath, 'tastekit.yaml'),
-        YAML.stringify(config)
+        YAML.stringify(config),
       );
-      
-      spinner.succeed(chalk.green('TasteKit workspace initialized successfully'));
-      
-      console.log('\nNext steps:');
-      console.log(chalk.cyan('  1. Run'), chalk.bold('tastekit onboard'), chalk.cyan('to start the onboarding wizard'));
-      console.log(chalk.cyan('  2. Run'), chalk.bold('tastekit compile'), chalk.cyan('to compile your taste artifacts'));
-      console.log(chalk.cyan('  3. Run'), chalk.bold('tastekit mcp add <server>'), chalk.cyan('to add MCP tool servers'));
-      
+
+      createSpinner.succeed(chalk.green('TasteKit workspace initialized'));
+
+      console.log('');
+      detail('Domain', domainId);
+      detail('Depth', depth);
+      if (llmConfig) {
+        detail('LLM', `${llmConfig.provider}${llmConfig.model ? ` (${llmConfig.model})` : ''}`);
+      }
+
+      console.log('');
+      hint('tastekit onboard', 'start the interview');
     } catch (error) {
-      spinner.fail(chalk.red('Failed to initialize workspace'));
-      console.error(error);
-      process.exit(1);
+      handleError(error);
     }
   });
+
+async function promptForProvider(): Promise<LLMProviderConfig> {
+  const { provider } = await inquirer.prompt([{
+    type: 'list',
+    name: 'provider',
+    message: 'Select your LLM provider:',
+    choices: [
+      { name: 'Anthropic (Claude)', value: 'anthropic' },
+      { name: 'OpenAI (GPT-4)', value: 'openai' },
+      { name: 'Ollama (local)', value: 'ollama' },
+    ],
+  }]);
+
+  const config: LLMProviderConfig = { provider };
+
+  if (provider === 'ollama') {
+    const { model } = await inquirer.prompt([{
+      type: 'input',
+      name: 'model',
+      message: 'Ollama model name:',
+      default: 'llama3.1',
+    }]);
+    if (model) config.model = model;
+  } else {
+    const envVar = provider === 'anthropic' ? 'ANTHROPIC_API_KEY' : 'OPENAI_API_KEY';
+    if (!process.env[envVar]) {
+      console.log(chalk.yellow(`\nNote: Set ${chalk.bold(envVar)} before running onboard.`));
+    }
+  }
+
+  return config;
+}

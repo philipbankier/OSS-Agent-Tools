@@ -7,6 +7,7 @@
 import { TasteKitAdapter, ExportOpts, InstallOpts } from '../adapter-interface.js';
 import { readFileSync, writeFileSync, cpSync, existsSync } from 'fs';
 import { join } from 'path';
+import { resolveArtifactPath, resolveSkillsPath } from '@tastekit/core/utils';
 
 export class OpenClawAdapter implements TasteKitAdapter {
   id = 'openclaw';
@@ -19,8 +20,7 @@ export class OpenClawAdapter implements TasteKitAdapter {
   
   async export(profilePath: string, outDir: string, opts: ExportOpts): Promise<void> {
     // Read TasteKit artifacts
-    const constitutionPath = join(profilePath, 'artifacts', 'constitution.v1.json');
-    const guardrailsPath = join(profilePath, 'artifacts', 'guardrails.v1.yaml');
+    const constitutionPath = resolveArtifactPath(profilePath, 'constitution');
     
     if (!existsSync(constitutionPath)) {
       throw new Error('Constitution not found. Run tastekit compile first.');
@@ -39,7 +39,7 @@ export class OpenClawAdapter implements TasteKitAdapter {
     
     // Copy skills
     if (opts.includeSkills) {
-      const skillsPath = join(profilePath, 'skills');
+      const skillsPath = resolveSkillsPath(profilePath);
       if (existsSync(skillsPath)) {
         cpSync(skillsPath, join(outDir, 'skills'), { recursive: true });
       }

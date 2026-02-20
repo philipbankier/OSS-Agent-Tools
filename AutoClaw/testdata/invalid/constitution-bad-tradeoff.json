@@ -1,0 +1,25 @@
+{
+  "schema_version": "constitution.v1",
+  "generated_at": "2026-02-18T10:00:00Z",
+  "generator_version": "0.5.0",
+  "user_scope": "test",
+  "principles": [{"id": "p1", "priority": 1, "statement": "Be clear.", "applies_to": ["all"]}],
+  "tone": {
+    "voice_keywords": ["direct"],
+    "forbidden_phrases": [],
+    "formatting_rules": []
+  },
+  "tradeoffs": {
+    "accuracy_vs_speed": 1.5,
+    "cost_sensitivity": 0.5,
+    "autonomy_level": 0.5
+  },
+  "evidence_policy": {
+    "require_citations_for": [],
+    "uncertainty_language_rules": []
+  },
+  "taboos": {
+    "never_do": [],
+    "must_escalate": []
+  }
+}

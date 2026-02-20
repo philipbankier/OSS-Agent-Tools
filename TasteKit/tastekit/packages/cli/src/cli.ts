@@ -7,6 +7,9 @@
  */
 
 import { Command } from 'commander';
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import { initCommand } from './commands/init.js';
 import { onboardCommand } from './commands/onboard.js';
 import { compileCommand } from './commands/compile.js';
@@ -18,13 +21,17 @@ import { driftCommand } from './commands/drift.js';
 import { evalCommand } from './commands/eval.js';
 import { exportCommand } from './commands/export.js';
 import { importCommand } from './commands/import.js';
+import { completionCommand } from './commands/completion.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const pkg = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf-8'));
 
 const program = new Command();
 
 program
   .name('tastekit')
   .description('CLI-first taste onboarding + Skills + MCP + Drift + Trust + Tracing')
-  .version('1.0.0');
+  .version(pkg.version);
 
 // Global options
 program.option('--json', 'Output in JSON format');
@@ -42,5 +49,6 @@ program.addCommand(driftCommand);
 program.addCommand(evalCommand);
 program.addCommand(exportCommand);
 program.addCommand(importCommand);
+program.addCommand(completionCommand);
 
 program.parse();

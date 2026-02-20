@@ -34,3 +34,9 @@ npm-debug.log*
 pnpm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Local AI session placeholders
+CLAUDE.md
+
+# npm lockfile is not used in this pnpm workspace
+package-lock.json

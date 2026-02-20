@@ -7,3 +7,4 @@
 export * from './generator.js';
 export * from './linter.js';
 export * from './packer.js';
+export * from './graph.js';

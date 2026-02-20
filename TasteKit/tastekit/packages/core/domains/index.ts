@@ -1,6 +1,6 @@
 /**
  * TasteKit Domains Registry
- * 
+ *
  * Central registry of all available domains.
  */
 
@@ -9,6 +9,12 @@ import { ResearchAgentDomain } from './research-agent/domain.js';
 import { SalesAgentDomain } from './sales-agent/domain.js';
 import { SupportAgentDomain } from './support-agent/domain.js';
 import { DevelopmentAgentDomain } from './development-agent/domain.js';
+import { ContentAgentRubric } from './content-agent/rubric.js';
+import { DevelopmentAgentRubric } from './development-agent/rubric.js';
+import { ResearchAgentRubric } from './research-agent/rubric.js';
+import { SalesAgentRubric } from './sales-agent/rubric.js';
+import { SupportAgentRubric } from './support-agent/rubric.js';
+import { DomainRubric } from '../interview/rubric.js';
 
 export const AVAILABLE_DOMAINS = [
   ContentAgentDomain,
@@ -18,8 +24,21 @@ export const AVAILABLE_DOMAINS = [
   DevelopmentAgentDomain,
 ] as const;
 
+/** Map of domain_id → rubric for domains that have rubrics */
+const DOMAIN_RUBRICS: Record<string, DomainRubric> = {
+  'content-agent': ContentAgentRubric,
+  'development-agent': DevelopmentAgentRubric,
+  'research-agent': ResearchAgentRubric,
+  'sales-agent': SalesAgentRubric,
+  'support-agent': SupportAgentRubric,
+};
+
 export function getDomainById(id: string) {
   return AVAILABLE_DOMAINS.find(d => d.id === id);
+}
+
+export function getDomainRubric(id: string): DomainRubric | undefined {
+  return DOMAIN_RUBRICS[id];
 }
 
 export function listDomains() {
@@ -29,7 +48,12 @@ export function listDomains() {
     description: d.description,
     version: d.version,
     is_stub: d.version.includes('stub'),
+    has_rubric: d.id in DOMAIN_RUBRICS,
   }));
 }
 
 export * from './content-agent/index.js';
+export * from './research-agent/index.js';
+export * from './sales-agent/index.js';
+export * from './support-agent/index.js';
+export * from './development-agent/index.js';

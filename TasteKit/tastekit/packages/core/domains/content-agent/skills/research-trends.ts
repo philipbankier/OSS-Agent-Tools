@@ -8,8 +8,13 @@ export const ResearchTrendsSkill = {
   skill_id: 'research-trends',
   name: 'Research Trends',
   description: 'Analyze what content is performing well in your niche',
+  tags: ['research', 'trends', 'content-strategy'],
   risk_level: 'low' as const,
   required_tools: ['web-search'],
+  compatible_runtimes: ['claude-code', 'openclaw', 'manus'],
+  feeds_into: ['generate-post-options'],
+  pipeline_phase: 'capture',
+  context_model: 'inherit' as const,
   
   skill_md_content: `# Research Trends
 

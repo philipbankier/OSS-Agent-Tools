@@ -7,6 +7,7 @@
 import { TasteKitAdapter, ExportOpts, InstallOpts } from '../adapter-interface.js';
 import { readFileSync, writeFileSync, cpSync, existsSync } from 'fs';
 import { join } from 'path';
+import { resolveArtifactPath, resolveSkillsPath } from '@tastekit/core/utils';
 
 export class ManusAdapter implements TasteKitAdapter {
   id = 'manus';
@@ -19,7 +20,7 @@ export class ManusAdapter implements TasteKitAdapter {
   
   async export(profilePath: string, outDir: string, opts: ExportOpts): Promise<void> {
     // Manus primarily uses Skills format, which TasteKit already generates
-    const skillsPath = join(profilePath, 'skills');
+    const skillsPath = resolveSkillsPath(profilePath);
     
     if (!existsSync(skillsPath)) {
       throw new Error('Skills not found. Run tastekit compile first.');
@@ -30,7 +31,7 @@ export class ManusAdapter implements TasteKitAdapter {
     cpSync(skillsPath, outSkillsPath, { recursive: true });
     
     // Read constitution for context
-    const constitutionPath = join(profilePath, 'artifacts', 'constitution.v1.json');
+    const constitutionPath = resolveArtifactPath(profilePath, 'constitution');
     if (existsSync(constitutionPath)) {
       const constitution = JSON.parse(readFileSync(constitutionPath, 'utf-8'));
       

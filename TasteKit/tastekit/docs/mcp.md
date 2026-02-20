@@ -1,4 +1,4 @@
-'''# MCP Integration
+# MCP Integration
 
 TasteKit is designed to be **MCP-first**, meaning all tool integration is handled through the **Model Context Protocol (MCP)**. MCP is an open standard for discovering, binding, and invoking tools, resources, and prompts in a way that is runtime-agnostic and secure.
 
@@ -67,4 +67,3 @@ This saves the server's fingerprint to `.tastekit/trust.v1.yaml`. If the server'
 ## The `bindings.v1.yaml` File
 
 This file is the source of truth for all MCP integrations. It contains a list of all configured servers and, for each server, the specific tools, resources, and prompts that have been explicitly bound to the workspace. It also stores the server's fingerprint at the time of binding, which is used by the `trust audit` command to detect changes.
-'''

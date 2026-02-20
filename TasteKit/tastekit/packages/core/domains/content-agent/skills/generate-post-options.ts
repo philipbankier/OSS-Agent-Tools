@@ -8,8 +8,13 @@ export const GeneratePostOptionsSkill = {
   skill_id: 'generate-post-options',
   name: 'Generate Post Options',
   description: 'Create 3-5 variations of a post for user selection',
+  tags: ['content-creation', 'social-media', 'writing'],
   risk_level: 'low' as const,
   required_tools: [],
+  compatible_runtimes: ['claude-code', 'openclaw', 'manus'],
+  prerequisites: ['research-trends'],
+  pipeline_phase: 'process',
+  context_model: 'inherit' as const,
   
   skill_md_content: `# Generate Post Options
 

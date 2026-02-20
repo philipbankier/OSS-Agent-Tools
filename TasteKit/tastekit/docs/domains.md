@@ -1,84 +1,82 @@
 # TasteKit Domains
 
-TasteKit v0.5 introduces a **domain-based architecture** that provides specialized onboarding, skills, and playbooks for specific types of agents. Instead of creating a generic agent, users choose a domain that matches their use case, and TasteKit provides deep, specialized support for that domain.
+TasteKit uses a **domain-based architecture** that provides specialized onboarding, skills, and playbooks for specific types of agents. Instead of creating a generic agent, users choose a domain that matches their use case, and TasteKit provides deep, specialized support for that domain.
 
 ## What is a Domain?
 
 A **domain** in TasteKit is a complete package that includes:
 
-- **Specialized onboarding questions** that dig deep into domain-specific requirements
-- **Pre-built skills library** with common workflows for that domain
-- **Example playbooks** that chain skills together for complex automation
-- **Recommended MCP tool integrations** for the domain
-- **Domain-specific guardrails** and approval workflows
+- **Interview rubric** with domain-specific dimensions organized by depth tier (quick, guided, operator)
+- **Structured onboarding questions** as fallback when no LLM is available
+- **Pre-built skills library** with SKILL.md files and progressive disclosure
+- **Playbooks** that define multi-step execution plans for common workflows
+- **Domain constants** (methodologies, output formats, channels, etc.)
 
 ## Available Domains
 
-### Content Agent (v0.5 - Fully Implemented)
+All 5 domains are fully implemented with rubrics, questions, skills, and playbooks.
+
+### Content Agent
 
 The Content Agent domain is designed for individuals and businesses that want to automate social media content creation, brand management, and audience engagement.
 
-**Use Cases:**
-- Personal brand management (Twitter, LinkedIn, TikTok, Instagram)
-- Business social media accounts
-- AI influencers and content creators
-- Newsletter and blog content generation
+**Use Cases:** Personal brand management, business social media, AI influencers, newsletter/blog generation.
 
-**Key Features:**
-- Deep onboarding about brand voice, tone, and audience
-- Skills for research, ideation, content generation, and scheduling
-- Platform-specific content adaptation (Twitter threads, LinkedIn articles, TikTok scripts)
-- Integration with image generation, scheduling tools, and analytics
+**Rubric:** 16 dimensions across 3 depth tiers. Covers brand voice, platform strategy, content workflow, engagement philosophy, and more.
+
+**Skills:** `research-trends` (web research for content ideas), `generate-post-options` (draft multiple post variations).
+
+**Playbooks:** `simple-post` (single post creation), `research-and-post` (research-informed content), `content-calendar` (multi-day planning).
 
 **Learn More:** [Content Agent Documentation](./domains/content-agent.md)
 
-### Research Agent (v0.5 - Stub)
-
-The Research Agent domain is for agents that gather, analyze, and synthesize information from various sources.
-
-**Planned Use Cases:**
-- Market research and competitive analysis
-- Academic research and literature reviews
-- News monitoring and trend analysis
-- Due diligence and fact-checking
-
-**Status:** Stub implementation. Community contributions welcome.
-
-### Sales Agent (v0.5 - Stub)
-
-The Sales Agent domain is for agents that support sales processes, from lead generation to deal closing.
-
-**Planned Use Cases:**
-- Lead qualification and outreach
-- CRM management and follow-ups
-- Proposal generation
-- Sales analytics and forecasting
-
-**Status:** Stub implementation. Community contributions welcome.
-
-### Support Agent (v0.5 - Stub)
-
-The Support Agent domain is for agents that handle customer support, troubleshooting, and user assistance.
-
-**Planned Use Cases:**
-- Customer support ticket triage and response
-- Knowledge base management
-- Onboarding assistance
-- Escalation management
-
-**Status:** Stub implementation. Community contributions welcome.
-
-### Development Agent (v0.5 - Stub)
+### Development Agent
 
 The Development Agent domain is for agents that assist with software development tasks.
 
-**Planned Use Cases:**
-- Code review and refactoring
-- Documentation generation
-- Bug triage and debugging assistance
-- Test generation
+**Use Cases:** Code review, documentation generation, bug triage, test generation, refactoring assistance.
 
-**Status:** Stub implementation. Community contributions welcome.
+**Rubric:** 24 dimensions (the most comprehensive domain). Covers code style, architecture preferences, testing philosophy, documentation standards, and more.
+
+**Skills:** `code-review` (automated code review), `test-generation` (generate test cases from code).
+
+**Playbooks:** `review-and-fix` (review code and apply fixes), `documentation-sprint` (generate docs for a module).
+
+### Research Agent
+
+The Research Agent domain is for agents that gather, analyze, and synthesize information from various sources.
+
+**Use Cases:** Market research, competitive analysis, academic literature reviews, news monitoring, due diligence.
+
+**Rubric:** 18 dimensions. Covers research methodology, source preferences, synthesis style, citation standards, bias awareness, fact-checking rigor, and more.
+
+**Skills:** `web-research` (structured web research with source tracking), `competitive-analysis` (market and competitor analysis).
+
+**Playbooks:** `quick-lookup` (fast factual research), `deep-dive-analysis` (comprehensive multi-source research report).
+
+### Sales Agent
+
+The Sales Agent domain is for agents that support sales processes, from lead generation to deal closing.
+
+**Use Cases:** Lead qualification, outreach email sequences, CRM management, proposal generation, pipeline analytics.
+
+**Rubric:** 18 dimensions. Covers sales philosophy, communication style, objection handling, deal management, negotiation approach, and more.
+
+**Skills:** `lead-qualification` (score and qualify leads), `outreach-email` (personalized outreach sequences).
+
+**Playbooks:** `lead-outreach` (qualification to first email), `proposal-workflow` (research to proposal delivery).
+
+### Support Agent
+
+The Support Agent domain is for agents that handle customer support, troubleshooting, and user assistance.
+
+**Use Cases:** Ticket triage, response drafting, knowledge base management, escalation workflows, quality assurance.
+
+**Rubric:** 18 dimensions. Covers support philosophy, tone and empathy, escalation approach, SLA awareness, crisis communication, and more.
+
+**Skills:** `ticket-triage` (classify and prioritize tickets), `response-draft` (draft customer-facing responses).
+
+**Playbooks:** `standard-ticket` (triage through resolution), `escalation-workflow` (escalation with context handoff).
 
 ## Choosing a Domain
 
@@ -87,27 +85,44 @@ When you run `tastekit init`, you will be prompted to choose a domain:
 ```bash
 $ tastekit init
 ? What type of agent are you building?
-  ❯ Content Agent - Social media, brand management, content creation
+  > Content Agent - Social media, brand management, content creation
+    Development Agent - Software development tasks
     Research Agent - Information gathering and analysis
     Sales Agent - Lead generation and deal management
     Support Agent - Customer support and assistance
-    Development Agent - Software development tasks
-    General Agent - Custom agent (advanced users)
 ```
 
-Your choice determines which specialized onboarding flow, skills, and playbooks you will receive.
+Your choice determines which specialized interview rubric, skills, and playbooks you receive. You can also skip the interactive prompt:
+
+```bash
+tastekit init --domain content-agent --depth guided
+```
+
+## Interview Depth Tiers
+
+Each domain organizes its rubric dimensions into three depth tiers:
+
+| Tier | Time | Dimensions | Description |
+|:---|:---:|:---:|:---|
+| Quick | ~5 min | 5 | Essential preferences only — enough to get started |
+| Guided | ~15 min | 13 | Thorough profile with domain-specific deep dives |
+| Operator | ~30 min | 18+ | Full exploration with examples and edge cases |
+
+The LLM interviewer adaptively explores dimensions based on the chosen depth, spending more time on topics where your answers reveal nuance.
 
 ## Contributing a New Domain
 
-We welcome community contributions of new domains! To add a domain, you need to provide:
+We welcome community contributions of new domains! Each domain requires:
 
-1. **Domain definition** in `packages/core/domains/<domain-name>/domain.ts`
-2. **Specialized onboarding questions** in `packages/core/domains/<domain-name>/questions.ts`
-3. **Skills library** in `packages/core/domains/<domain-name>/skills/`
-4. **Example playbooks** in `packages/core/domains/<domain-name>/playbooks/`
-5. **Documentation** in `docs/domains/<domain-name>.md`
+1. **`domain.ts`** — Domain metadata, version, description, and constants
+2. **`rubric.ts`** — Interview dimensions organized by depth tier
+3. **`questions.ts`** — Structured fallback questions
+4. **`skills/`** — At least 2 skills with SKILL.md content
+5. **`index.ts`** — Barrel exports
 
-See [CONTRIBUTING.md](../community/CONTRIBUTING.md) for detailed instructions on contributing a domain.
+Plus wiring into `domains/index.ts`, `skills-compiler.ts`, and `playbook-compiler.ts`.
+
+See the existing domains (e.g., `packages/core/domains/content-agent/`) as a reference implementation.
 
 ## Domain Architecture
 
@@ -116,21 +131,36 @@ Each domain is a self-contained module within the core library:
 ```
 packages/core/domains/
 ├── content-agent/
-│   ├── domain.ts           # Domain metadata and configuration
-│   ├── questions.ts        # Specialized onboarding questions
-│   ├── skills/             # Pre-built skills for this domain
+│   ├── domain.ts           # Domain metadata and constants
+│   ├── rubric.ts           # 16 interview dimensions by depth tier
+│   ├── questions.ts        # 15 structured fallback questions
+│   ├── skills/
 │   │   ├── research-trends.ts
 │   │   ├── generate-hooks.ts
-│   │   ├── write-caption.ts
-│   │   └── ...
-│   ├── playbooks/          # Example playbooks
-│   │   ├── daily-content-sprint.yaml
-│   │   └── weekly-campaign.yaml
-│   └── tools.ts            # Recommended MCP tool integrations
-├── research-agent/         # Stub
-├── sales-agent/            # Stub
-├── support-agent/          # Stub
-└── development-agent/      # Stub
+│   │   └── index.ts
+│   └── index.ts
+├── development-agent/
+│   ├── domain.ts
+│   ├── rubric.ts           # 24 dimensions (most comprehensive)
+│   ├── questions.ts
+│   ├── skills/
+│   └── index.ts
+├── research-agent/
+│   ├── domain.ts
+│   ├── rubric.ts           # 18 dimensions
+│   ├── questions.ts
+│   ├── skills/
+│   └── index.ts
+├── sales-agent/
+│   ├── domain.ts
+│   ├── rubric.ts           # 18 dimensions
+│   ├── questions.ts
+│   ├── skills/
+│   └── index.ts
+└── support-agent/
+    ├── domain.ts
+    ├── rubric.ts           # 18 dimensions
+    ├── questions.ts
+    ├── skills/
+    └── index.ts
 ```
-
-This modular structure makes it easy for the community to contribute new domains without affecting existing ones.

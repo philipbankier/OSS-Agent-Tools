@@ -1,0 +1,40 @@
+services:
+  # ─────────────────────────────────────────────
+  # AutoClaw Agent (one-shot query)
+  #   docker compose run --rm autoclaw-agent -m "Hello"
+  # ─────────────────────────────────────────────
+  autoclaw-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: autoclaw-agent
+    profiles:
+      - agent
+    volumes:
+      - ./config/config.json:/home/autoclaw/.autoclaw/config.json:ro
+      - autoclaw-workspace:/home/autoclaw/.autoclaw/workspace
+    entrypoint: ["autoclaw", "agent"]
+    stdin_open: true
+    tty: true
+
+  # ─────────────────────────────────────────────
+  # AutoClaw Gateway (Long-running Bot)
+  #   docker compose up autoclaw-gateway
+  # ─────────────────────────────────────────────
+  autoclaw-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: autoclaw-gateway
+    restart: unless-stopped
+    profiles:
+      - gateway
+    volumes:
+      # Configuration file
+      - ./config/config.json:/home/autoclaw/.autoclaw/config.json:ro
+      # Persistent workspace (sessions, memory, logs)
+      - autoclaw-workspace:/home/autoclaw/.autoclaw/workspace
+    command: ["gateway"]
+
+volumes:
+  autoclaw-workspace:
