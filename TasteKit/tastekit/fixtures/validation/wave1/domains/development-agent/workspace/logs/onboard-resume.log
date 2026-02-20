@@ -1,0 +1,18 @@
+spawn sh -lc cd '/Users/philipbankier/Development/OSS/Taste OSS/OSS-Agent-Tools-worktrees/tastekit-validation-wave1/TasteKit/tastekit/fixtures/validation/wave1/domains/development-agent/workspace' && node '/Users/philipbankier/Development/OSS/Taste OSS/OSS-Agent-Tools-worktrees/tastekit-validation-wave1/TasteKit/tastekit/packages/cli/dist/cli.js' onboard --resume
+- Connecting to LLM...
+✔ Connected to ollama
+Resuming previous session...
+
+TasteKit Onboarding Interview
+
+Domain: development-agent | Depth: quick | LLM: ollama
+Type /save to save and quit, /skip to skip a topic
+
+? You:? You: /? You: /s? You: /sk? You: /ski? You: /skip? You: /skip? You: /skip
+
+  Got it — we’ll skip that for now. Let’s jump into something more concrete: When you’re writing code, what’s your top non-negotiable technical value? For example, is it correctness, readability, speed, or something else? And if you had to rank your top 3, what would they be?
+
+? You:? You: /? You: /s? You: /sa? You: /sav? You: /save? You: /save? You: /save
+
+  Session saved. Run with --resume to continue later.
+

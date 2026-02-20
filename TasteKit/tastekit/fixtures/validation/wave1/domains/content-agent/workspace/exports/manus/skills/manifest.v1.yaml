@@ -1,0 +1,29 @@
+schema_version: skills_manifest.v1
+skills:
+  - compatible_runtimes:
+      - claude-code
+      - openclaw
+      - manus
+    description: Analyze what content is performing well in your niche
+    name: Research Trends
+    required_tools:
+      - web-search
+    risk_level: low
+    skill_id: research-trends
+    tags:
+      - research
+      - trends
+      - content-strategy
+  - compatible_runtimes:
+      - claude-code
+      - openclaw
+      - manus
+    description: Create 3-5 variations of a post for user selection
+    name: Generate Post Options
+    required_tools: []
+    risk_level: low
+    skill_id: generate-post-options
+    tags:
+      - content-creation
+      - social-media
+      - writing

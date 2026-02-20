@@ -1,0 +1,18 @@
+spawn sh -lc cd '/Users/philipbankier/Development/OSS/Taste OSS/OSS-Agent-Tools-worktrees/tastekit-validation-wave1/TasteKit/tastekit/fixtures/validation/wave1/domains/research-agent/workspace' && node '/Users/philipbankier/Development/OSS/Taste OSS/OSS-Agent-Tools-worktrees/tastekit-validation-wave1/TasteKit/tastekit/packages/cli/dist/cli.js' onboard
+- Connecting to LLM...
+✔ Connected to ollama
+
+TasteKit Onboarding Interview
+
+Domain: research-agent | Depth: quick | LLM: ollama
+Type /save to save and quit, /skip to skip a topic
+
+
+  Hey — I’m setting up an AI agent to help you research, and I want to make sure it’s tuned to *your* style. Think of this like a quick conversation to get the vibe right.
+
+Let’s start with the big one: What’s the main goal you want this agent to help you achieve? What problem are you trying to solve — or what outcome are you hoping to get?
+
+? You:? You: /? You: /s? You: /sa? You: /sav? You: /save? You: /save? You: /save
+
+  Session saved. Run with --resume to continue later.
+
