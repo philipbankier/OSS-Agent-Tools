@@ -6,6 +6,15 @@ This document outlines the planned development trajectory for TasteKit beyond th
 
 The v1.0 release establishes the foundational architecture with all core modules implemented. The system is functional and ready for community contributions, with the MCP client implemented as a well-structured interface stub.
 
+## Current Focus: Test Foundation Wave 0 (In Progress)
+
+Before new feature expansion, TasteKit is hardening reliability with:
+- deterministic PR gating under ~10 minutes
+- command-surface integration coverage for all CLI commands/subcommands
+- v1/v2 layout compatibility regression checks
+- adapter compatibility tests across runtime targets
+- pre-release-only live Ollama smoke validation
+
 ## Short-term Goals (v1.1 - v1.3)
 
 ### v1.1: MCP Protocol Implementation

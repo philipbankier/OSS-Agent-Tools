@@ -8,6 +8,8 @@
   "scripts": {
     "build": "pnpm -r build",
     "test": "pnpm -r test",
+    "test:pr-gate": "bash scripts/validation/pr-gate.sh",
+    "test:pre-release-live": "bash scripts/validation/pre-release-live-ollama.sh",
     "lint": "pnpm -r lint",
     "clean": "pnpm -r clean"
   },

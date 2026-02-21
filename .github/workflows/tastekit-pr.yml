@@ -1,0 +1,33 @@
+name: TasteKit PR Gate
+
+on:
+  pull_request:
+    paths:
+      - 'TasteKit/tastekit/**'
+      - '.github/workflows/tastekit-pr.yml'
+
+jobs:
+  deterministic-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: TasteKit/tastekit
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.29.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: TasteKit/tastekit/pnpm-lock.yaml
+
+      - name: Run deterministic PR gate
+        run: bash scripts/validation/pr-gate.sh
