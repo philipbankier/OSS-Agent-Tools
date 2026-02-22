@@ -27,6 +27,9 @@ Thumbs.db
 
 # TasteKit workspaces (user data)
 .tastekit/
+# Keep deterministic contract fixtures checked in (nested test workspaces).
+!fixtures/contracts/**/.tastekit/
+!fixtures/contracts/**/.tastekit/**
 
 # Logs
 *.log
