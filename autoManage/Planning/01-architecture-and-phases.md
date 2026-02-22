@@ -17,9 +17,9 @@ autoManage is a local-first dashboard that monitors AI agents by consuming their
 ┌─────────────────────────────────────────────────────┐
 │                    v1.0 Architecture                │
 │                                                     │
-│  Agent 1 ──writes──▶ .tastekit/traces/run1.jsonl    │
-│  Agent 2 ──writes──▶ .tastekit/traces/run2.jsonl    │
-│  Agent 3 ──writes──▶ .tastekit/traces/run3.jsonl    │
+│  Agent 1 ──writes──▶ .tastekit/ops/traces/run1.trace.v1.jsonl │
+│  Agent 2 ──writes──▶ .tastekit/ops/traces/run2.trace.v1.jsonl │
+│  Agent 3 ──writes──▶ .tastekit/ops/traces/run3.trace.v1.jsonl │
 │                          │                          │
 │                    chokidar watches                  │
 │                          │                          │
@@ -51,7 +51,7 @@ autoManage is a local-first dashboard that monitors AI agents by consuming their
 ### Components
 
 #### 1. File Watcher
-- Uses `chokidar` to watch `.tastekit/traces/` directories for new and modified JSONL files
+- Uses `chokidar` to watch resolved trace directories (prefer `.tastekit/ops/traces/`, fallback `.tastekit/traces/`)
 - Configurable watch paths: reads TasteKit workspace configs (`tastekit.yaml`) to discover trace directories, or accepts explicit paths
 - On file change: reads new lines appended since last read (tail-follow pattern)
 - On new file: registers a new run, begins tailing
@@ -75,7 +75,7 @@ Transforms raw trace events into agent status:
 | `run_duration` | Time from first to last event |
 
 Agent identity comes from TasteKit artifacts:
-- `constitution.v1.yaml` → agent name, principles (for display)
+- `self/constitution.v1.json` (canonical) or legacy `artifacts/constitution.v1.json` → agent name, principles (for display)
 - `tastekit.yaml` → project name
 
 #### 4. SQLite Store
@@ -264,7 +264,7 @@ autoManage runs as a parallel track alongside the main TasteKit/AutoClaw develop
 **Scope**:
 - [ ] Next.js project scaffold (TypeScript, Tailwind, SQLite)
 - [ ] SQLite schema (agents, recent_events tables)
-- [ ] chokidar file watcher for `.tastekit/traces/` directories
+- [ ] chokidar file watcher for resolved trace directories (`.tastekit/ops/traces/` canonical)
 - [ ] Trace parser using TasteKit's `TraceReader`
 - [ ] Status deriver (trace events → agent status)
 - [ ] Agent cards grid (real-time via SSE)
@@ -335,8 +335,8 @@ autoManage runs as a parallel track alongside the main TasteKit/AutoClaw develop
 |---|---|---|
 | `TraceEventSchema` (`schemas/trace.ts`) | Event format contract | Import type, validate parsed events |
 | `TraceReader` (`tracing/reader.ts`) | JSONL parser | Import class, reuse for parsing trace files |
-| `WorkspaceConfig` (`schemas/workspace.ts`) | Discover trace directories | Read `tastekit.yaml` to find `.tastekit/` paths |
-| Constitution artifacts | Agent display name, principles | Read YAML for identity display on agent cards |
+| `WorkspaceConfig` (`schemas/workspace.ts`) | Discover trace directories | Read `tastekit.yaml` and resolve canonical `.tastekit/ops/traces/` (fallback supported) |
+| Constitution artifacts | Agent display name, principles | Read canonical JSON from `.tastekit/self/constitution.v1.json` (fallback supported) |
 | Guardrails artifacts | Approval rules context | Display what the approval is for |
 
 **Key constraint**: autoManage v1.0 makes ZERO changes to TasteKit. It is a pure consumer.

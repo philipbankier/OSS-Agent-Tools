@@ -2,10 +2,16 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-FIXTURE_ROOT="$ROOT_DIR/fixtures/validation/wave1/domains"
 CLI=(node "$ROOT_DIR/packages/cli/dist/cli.js")
-DOMAINS=(development-agent content-agent research-agent)
 TMP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/tastekit-wave1-check.XXXXXX")"
+
+V2_FIXTURE="$ROOT_DIR/fixtures/testing/e2e/v2/workspace"
+V1_FIXTURE="$ROOT_DIR/fixtures/testing/e2e/v1/workspace"
+SOUL_FIXTURE="$ROOT_DIR/fixtures/testing/import/soul"
+AGENT_FIXTURE="$ROOT_DIR/fixtures/testing/import/agent/agent.af"
+EVAL_FIXTURE="$ROOT_DIR/fixtures/testing/evals/basic-evalpack.yaml"
+TRACE_FIXTURE="$ROOT_DIR/fixtures/testing/traces/replay.jsonl"
+MCP_FIXTURE="$ROOT_DIR/fixtures/testing/mcp/mock-server.mjs"
 
 cleanup() {
   rm -rf "$TMP_ROOT"
@@ -28,6 +34,28 @@ require_dir() {
   fi
 }
 
+require_any_file() {
+  local a="$1"
+  local b="$2"
+  if [[ -f "$a" || -f "$b" ]]; then
+    return 0
+  fi
+  echo "Missing required file (checked both): $a OR $b" >&2
+  exit 1
+}
+
+require_nonempty_dir() {
+  local path="$1"
+  if [[ ! -d "$path" ]]; then
+    echo "Missing required directory: $path" >&2
+    exit 1
+  fi
+  if ! find "$path" -maxdepth 1 -type f | grep -q .; then
+    echo "Directory has no files: $path" >&2
+    exit 1
+  fi
+}
+
 echo "[wave1] root: $ROOT_DIR"
 
 echo "[wave1] install/build/test gates"
@@ -35,7 +63,8 @@ cd "$ROOT_DIR"
 pnpm install
 pnpm -r build
 pnpm --filter @tastekit/core test
-pnpm --filter @tastekit/cli build
+pnpm --filter @tastekit/adapters test
+pnpm --filter @tastekit/cli test
 pnpm node -e "import('@tastekit/adapters/claude-code').then(m=>{if(!m.ClaudeCodeAdapter) process.exit(1);})"
 
 echo "[wave1] cli smoke"
@@ -44,48 +73,46 @@ echo "[wave1] cli smoke"
 "${CLI[@]}" onboard --help >/dev/null
 "${CLI[@]}" compile --help >/dev/null
 "${CLI[@]}" export --help >/dev/null
+"${CLI[@]}" import --help >/dev/null
 "${CLI[@]}" skills --help >/dev/null
 "${CLI[@]}" drift --help >/dev/null
+"${CLI[@]}" trust --help >/dev/null
+"${CLI[@]}" mcp --help >/dev/null
+"${CLI[@]}" eval --help >/dev/null
+"${CLI[@]}" completion --help >/dev/null
 
-echo "[wave1] deterministic replay"
-for domain in "${DOMAINS[@]}"; do
-  src="$FIXTURE_ROOT/$domain/workspace"
-  replay="$TMP_ROOT/$domain"
+replay_fixture() {
+  local name="$1"
+  local source="$2"
+  local replay="$TMP_ROOT/$name"
 
-  require_dir "$src"
-  require_dir "$src/.tastekit"
-  require_file "$src/.tastekit/session.json"
-  require_file "$src/.tastekit/tastekit.yaml"
-
-  cp -R "$src" "$replay"
+  require_dir "$source"
+  cp -R "$source" "$replay"
 
   (
     cd "$replay"
 
-    # Resume-style compilation should be idempotent on fixture state.
     "${CLI[@]}" compile --resume >/dev/null
     "${CLI[@]}" compile --resume >/dev/null
-
-    # Skills graph smoke.
     "${CLI[@]}" skills graph >/dev/null
 
-    # Export compatibility checks.
     for target in claude-code openclaw manus; do
       out="$replay/replay-exports/$target"
       "${CLI[@]}" export --target "$target" --out "$out" >/dev/null
     done
 
-    # Drift loop sanity on synthetic traces.
     "${CLI[@]}" drift detect >/dev/null || true
   )
 
-  require_file "$replay/.tastekit/self/constitution.v1.json"
-  require_file "$replay/.tastekit/self/guardrails.v1.yaml"
-  require_file "$replay/.tastekit/self/memory.v1.yaml"
-  require_file "$replay/.tastekit/knowledge/skills/manifest.v1.yaml"
-  if ! find "$replay/.tastekit/knowledge/playbooks" -maxdepth 1 -type f | grep -q .; then
-    echo "Missing generated playbooks for domain: $domain" >&2
-    exit 1
+  require_any_file "$replay/.tastekit/self/constitution.v1.json" "$replay/.tastekit/artifacts/constitution.v1.json"
+  require_any_file "$replay/.tastekit/self/guardrails.v1.yaml" "$replay/.tastekit/artifacts/guardrails.v1.yaml"
+  require_any_file "$replay/.tastekit/self/memory.v1.yaml" "$replay/.tastekit/artifacts/memory.v1.yaml"
+  require_any_file "$replay/.tastekit/knowledge/skills/manifest.v1.yaml" "$replay/.tastekit/skills/manifest.v1.yaml"
+
+  if [[ -d "$replay/.tastekit/knowledge/playbooks" ]]; then
+    require_nonempty_dir "$replay/.tastekit/knowledge/playbooks"
+  else
+    require_nonempty_dir "$replay/.tastekit/artifacts/playbooks"
   fi
 
   require_file "$replay/replay-exports/claude-code/CLAUDE.md"
@@ -93,7 +120,54 @@ for domain in "${DOMAINS[@]}"; do
   require_file "$replay/replay-exports/openclaw/openclaw.config.json"
   require_file "$replay/replay-exports/manus/README.md"
 
-echo "[wave1] domain ok: $domain"
+  echo "[wave1] replay ok: $name"
+}
+
+echo "[wave1] deterministic replay"
+replay_fixture "v2-workspace" "$V2_FIXTURE"
+replay_fixture "v1-workspace" "$V1_FIXTURE"
+
+echo "[wave1] import round-trip"
+IMPORT_WS="$TMP_ROOT/import-workspace"
+mkdir -p "$IMPORT_WS"
+(
+  cd "$IMPORT_WS"
+  "${CLI[@]}" import --target soul-md --source "$SOUL_FIXTURE" >/dev/null
+  require_file "$IMPORT_WS/.tastekit/artifacts/constitution.v1.json"
+  "${CLI[@]}" import --target agent-file --source "$AGENT_FIXTURE" >/dev/null
+  require_file "$IMPORT_WS/.tastekit/artifacts/constitution.v1.json"
+)
+
+echo "[wave1] eval checks"
+EVAL_WS="$TMP_ROOT/eval-workspace"
+cp -R "$V1_FIXTURE" "$EVAL_WS"
+(
+  cd "$EVAL_WS"
+  "${CLI[@]}" eval run --pack "$EVAL_FIXTURE" >/dev/null
+  "${CLI[@]}" eval replay --trace "$TRACE_FIXTURE" >/dev/null
+)
+
+echo "[wave1] mcp checks"
+MCP_WS="$TMP_ROOT/mcp-workspace"
+mkdir -p "$MCP_WS/.tastekit"
+(
+  cd "$MCP_WS"
+  "${CLI[@]}" mcp add node --name mock --args "$MCP_FIXTURE" >/dev/null
+  "${CLI[@]}" mcp inspect mock >/dev/null
+  "${CLI[@]}" mcp bind --server mock >/dev/null
+  require_any_file "$MCP_WS/.tastekit/bindings.v1.json" "$MCP_WS/.tastekit/artifacts/bindings.v1.json"
+)
+
+echo "[wave1] completion and simulate contract"
+for shell in bash zsh fish; do
+  "${CLI[@]}" completion "$shell" >/dev/null
 done
+
+SIM_WS="$TMP_ROOT/simulate-workspace"
+mkdir -p "$SIM_WS"
+if "${CLI[@]}" simulate >/dev/null 2>&1; then
+  echo "simulate command unexpectedly succeeded" >&2
+  exit 1
+fi
 
 echo "[wave1] all checks passed"

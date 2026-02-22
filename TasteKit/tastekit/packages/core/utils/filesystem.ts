@@ -53,8 +53,8 @@ export function atomicWrite(path: string, content: string): void {
 // │   ├── sessions/
 // │   ├── derivation.v1.yaml
 // │   └── session.json
-// ├── bindings.v1.yaml           # Cross-cutting
-// └── trust.v1.yaml              # Cross-cutting
+// ├── bindings.v1.json           # Cross-cutting (canonical)
+// └── trust.v1.json              # Cross-cutting (canonical)
 
 /**
  * Layout version for workspace migration detection.
@@ -160,6 +160,60 @@ export function resolveSessionPath(workspacePath: string): string {
   if (existsSync(v1)) return v1;
 
   return v2;
+}
+
+/**
+ * Resolve trust policy path.
+ *
+ * Canonical location:
+ *   - .tastekit/trust.v1.json
+ *
+ * Legacy/read compatibility:
+ *   - .tastekit/trust.v1.yaml
+ *   - .tastekit/artifacts/trust.v1.json
+ *   - .tastekit/artifacts/trust.v1.yaml
+ */
+export function resolveTrustPath(workspacePath: string): string {
+  const canonical = join(workspacePath, 'trust.v1.json');
+  if (existsSync(canonical)) return canonical;
+
+  const rootYaml = join(workspacePath, 'trust.v1.yaml');
+  if (existsSync(rootYaml)) return rootYaml;
+
+  const legacyJson = join(workspacePath, 'artifacts', 'trust.v1.json');
+  if (existsSync(legacyJson)) return legacyJson;
+
+  const legacyYaml = join(workspacePath, 'artifacts', 'trust.v1.yaml');
+  if (existsSync(legacyYaml)) return legacyYaml;
+
+  return canonical;
+}
+
+/**
+ * Resolve MCP bindings path.
+ *
+ * Canonical location:
+ *   - .tastekit/bindings.v1.json
+ *
+ * Legacy/read compatibility:
+ *   - .tastekit/bindings.v1.yaml
+ *   - .tastekit/artifacts/bindings.v1.json
+ *   - .tastekit/artifacts/bindings.v1.yaml
+ */
+export function resolveBindingsPath(workspacePath: string): string {
+  const canonical = join(workspacePath, 'bindings.v1.json');
+  if (existsSync(canonical)) return canonical;
+
+  const rootYaml = join(workspacePath, 'bindings.v1.yaml');
+  if (existsSync(rootYaml)) return rootYaml;
+
+  const legacyJson = join(workspacePath, 'artifacts', 'bindings.v1.json');
+  if (existsSync(legacyJson)) return legacyJson;
+
+  const legacyYaml = join(workspacePath, 'artifacts', 'bindings.v1.yaml');
+  if (existsSync(legacyYaml)) return legacyYaml;
+
+  return canonical;
 }
 
 /**

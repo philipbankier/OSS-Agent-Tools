@@ -3,8 +3,10 @@ import chalk from 'chalk';
 import ora from 'ora';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
+import YAML from 'yaml';
 import { TrustManager, TrustAuditor } from '@tastekit/core/trust';
-import { TrustV1 } from '@tastekit/core/schemas';
+import { BindingsV1, TrustV1 } from '@tastekit/core/schemas';
+import { resolveBindingsPath, resolveTrustPath } from '@tastekit/core/utils';
 import { getGlobalOptions, detail, hint, table, handleError, jsonOutput } from '../ui.js';
 
 const DEFAULT_TRUST_POLICY: TrustV1 = {
@@ -17,20 +19,36 @@ const DEFAULT_TRUST_POLICY: TrustV1 = {
   },
 };
 
-function getTrustPath(): string {
-  return join(process.cwd(), '.tastekit', 'artifacts', 'trust.v1.json');
+function getWorkspacePath(): string {
+  return join(process.cwd(), '.tastekit');
+}
+
+function getTrustReadPath(): string {
+  return resolveTrustPath(getWorkspacePath());
+}
+
+function getCanonicalTrustPath(): string {
+  return join(getWorkspacePath(), 'trust.v1.json');
+}
+
+function parseJsonOrYaml<T>(raw: string): T {
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return YAML.parse(raw) as T;
+  }
 }
 
 function loadTrustPolicy(): TrustV1 {
-  const trustPath = getTrustPath();
+  const trustPath = getTrustReadPath();
   if (!existsSync(trustPath)) {
     return { ...DEFAULT_TRUST_POLICY };
   }
-  return JSON.parse(readFileSync(trustPath, 'utf-8'));
+  return parseJsonOrYaml<TrustV1>(readFileSync(trustPath, 'utf-8'));
 }
 
 function saveTrustPolicy(policy: TrustV1): void {
-  const trustPath = getTrustPath();
+  const trustPath = getCanonicalTrustPath();
   mkdirSync(join(trustPath, '..'), { recursive: true });
   writeFileSync(trustPath, JSON.stringify(policy, null, 2), 'utf-8');
 }
@@ -40,7 +58,7 @@ const trustInitCommand = new Command('init')
   .action(async () => {
     const spinner = ora('Initializing trust policy...').start();
     try {
-      const trustPath = getTrustPath();
+      const trustPath = getTrustReadPath();
       if (existsSync(trustPath)) {
         spinner.info(chalk.yellow('Trust policy already exists.'));
         return;
@@ -48,7 +66,7 @@ const trustInitCommand = new Command('init')
 
       saveTrustPolicy(DEFAULT_TRUST_POLICY);
       spinner.succeed(chalk.green('Trust policy initialized'));
-      detail('Written to', trustPath);
+      detail('Written to', getCanonicalTrustPath());
       hint('tastekit trust pin-mcp', 'pin MCP servers');
     } catch (error) {
       handleError(error, spinner);
@@ -119,19 +137,19 @@ const trustAuditCommand = new Command('audit')
     const spinner = ora('Auditing trust policy...').start();
 
     try {
-      const trustPath = getTrustPath();
-      const bindingsPath = join(process.cwd(), '.tastekit', 'artifacts', 'bindings.v1.json');
+      const trustPath = getTrustReadPath();
+      const bindingsPath = resolveBindingsPath(getWorkspacePath());
 
       if (!existsSync(trustPath)) {
         spinner.info(chalk.yellow('No trust policy found. Run `tastekit trust init` first.'));
         return;
       }
 
-      const trust = JSON.parse(readFileSync(trustPath, 'utf-8'));
+      const trust = parseJsonOrYaml<TrustV1>(readFileSync(trustPath, 'utf-8'));
 
       // Load bindings if they exist
-      const bindings = existsSync(bindingsPath)
-        ? JSON.parse(readFileSync(bindingsPath, 'utf-8'))
+      const bindings: BindingsV1 = existsSync(bindingsPath)
+        ? parseJsonOrYaml<BindingsV1>(readFileSync(bindingsPath, 'utf-8'))
         : { schema_version: 'bindings.v1', servers: [] };
 
       const auditor = new TrustAuditor();

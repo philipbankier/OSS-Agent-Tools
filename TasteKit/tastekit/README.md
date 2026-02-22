@@ -57,6 +57,32 @@ tastekit eval run --pack .tastekit/evals/tone-check.yaml
 tastekit trust audit
 ```
 
+## Testing and Validation
+
+TasteKit uses a layered test stack:
+- Core unit tests
+- Adapter compatibility tests
+- CLI integration tests
+- Deterministic fixture replay gates (`v1` + `v2` workspace layouts)
+- Pre-release live Ollama smoke checks
+
+Run the deterministic PR gate locally:
+
+```bash
+bash scripts/validation/pr-gate.sh
+```
+
+Run the pre-release live gate (Ollama required):
+
+```bash
+bash scripts/validation/pre-release-live-ollama.sh
+```
+
+Testing docs:
+- `docs/testing/strategy.md`
+- `docs/testing/command-matrix.md`
+- `docs/testing/layout-compatibility.md`
+
 ## CLI Commands
 
 | Command | Description |
@@ -77,22 +103,27 @@ All commands support `--json` for machine-readable output and `--verbose` for de
 
 ## Generated Artifacts
 
-After running `tastekit compile`, the `.tastekit/artifacts/` directory contains:
+After running `tastekit compile`, TasteKit supports both legacy flat (`v1`) and three-space (`v2`) layouts:
 
 ```
 .tastekit/
-├── artifacts/
+├── self/
 │   ├── constitution.v1.json    # Principles, tone, tradeoffs, taboos
 │   ├── guardrails.v1.yaml      # Permissions, approvals, rate limits
-│   ├── memory.v1.yaml          # Write policy, retention, consolidation
-│   ├── trust.v1.json           # Pinned servers and skill sources
-│   ├── bindings.v1.json        # MCP tool bindings
+│   └── memory.v1.yaml          # Write policy, retention, consolidation
+├── knowledge/
+│   ├── skills/
+│   │   ├── manifest.v1.yaml    # Skills index with metadata
+│   │   └── <skill-id>/SKILL.md # Progressive disclosure skill files
 │   └── playbooks/              # Domain-specific execution plans
-├── skills/
-│   ├── manifest.v1.yaml        # Skills index with metadata
-│   └── <skill-id>/SKILL.md     # Progressive disclosure skill files
-├── traces/                     # JSONL trace files from agent runs
-└── session.json                # Onboarding interview state
+├── ops/
+│   ├── traces/                 # JSONL trace files from agent runs
+│   ├── drift/                  # Drift proposals
+│   ├── derivation.v1.yaml      # Compile resume state
+│   └── session.json            # Onboarding interview state
+├── artifacts/                  # Legacy compatibility (v1)
+├── skills/                     # Legacy compatibility (v1)
+└── traces/                     # Legacy compatibility (v1)
 ```
 
 ## Agent Domains
@@ -127,6 +158,7 @@ tastekit/
 │   ├── security.md    # Trust model and threat analysis
 │   ├── tracing.md     # Trace format and replay
 │   ├── domains.md     # Domain system architecture
+│   ├── testing/       # Test strategy and coverage matrices
 │   ├── adapters/      # Per-adapter guides
 │   └── domains/       # Per-domain deep dives
 └── community/         # Contributing guidelines and RFCs

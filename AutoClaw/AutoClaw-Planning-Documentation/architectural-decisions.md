@@ -30,7 +30,7 @@ The original PRD described TasteKit integration via "CLI subprocess calls" where
 User workflow:
 1. Install TasteKit (npm) on their dev machine
 2. Run `tastekit init && tastekit onboard && tastekit compile`
-3. TasteKit outputs static artifacts to `.tastekit/artifacts/`
+3. TasteKit outputs static artifacts to canonical three-space paths (`.tastekit/self/`, `.tastekit/knowledge/`, `.tastekit/ops/`) plus root cross-cutting contracts (`.tastekit/trust.v1.json`, `.tastekit/bindings.v1.json`)
 4. AutoClaw reads these artifacts directly (pure Go JSON/YAML parsing)
 5. For drift detection: AutoClaw implements its own Go-native analyzer
 6. For recompilation: user runs TasteKit again on their dev machine
