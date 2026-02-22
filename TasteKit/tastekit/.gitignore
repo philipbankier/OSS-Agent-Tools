@@ -30,6 +30,8 @@ Thumbs.db
 # Keep deterministic contract fixtures checked in (nested test workspaces).
 !fixtures/contracts/**/.tastekit/
 !fixtures/contracts/**/.tastekit/**
+!fixtures/testing/e2e/**/.tastekit/
+!fixtures/testing/e2e/**/.tastekit/**
 
 # Logs
 *.log
