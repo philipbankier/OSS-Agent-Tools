@@ -103,7 +103,7 @@ If your agent needs tools (web search, file access, APIs), add them via MCP:
 
 ```bash
 # Add an MCP server (stdio command or HTTP URL)
-tastekit mcp add npx @anthropic/mcp-server-filesystem --name filesystem
+tastekit mcp add npx --name filesystem --args "-y,@modelcontextprotocol/server-filesystem,."
 
 # See what tools it offers
 tastekit mcp inspect filesystem
@@ -112,7 +112,7 @@ tastekit mcp inspect filesystem
 tastekit mcp bind
 ```
 
-Bindings are saved to `.tastekit/artifacts/bindings.v1.json`. Guardrails are automatically generated from tool risk annotations.
+Bindings are saved to `.tastekit/bindings.v1.json`. Guardrails are automatically generated from tool risk annotations.
 
 ## 7. (Optional) Set Up Trust
 
@@ -131,7 +131,7 @@ tastekit trust audit
 
 ## What's Next?
 
-Your TasteKit profile is compiled and ready to use. As your agent runs, it generates trace files in `.tastekit/traces/`. Use these for ongoing maintenance:
+Your TasteKit profile is compiled and ready to use. As your agent runs, it generates trace files in `.tastekit/ops/traces/` (with legacy fallback to `.tastekit/traces/`). Use these for ongoing maintenance:
 
 - **List skills**: `tastekit skills list` — see your generated skills in a table
 - **Detect drift**: `tastekit drift detect` — analyze traces for behavioral drift

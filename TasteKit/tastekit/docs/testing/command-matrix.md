@@ -7,7 +7,7 @@ Legend:
 
 | Command | Success Path | Failure Path | Coverage |
 |---|---|---|---|
-| `tastekit init` | workspace + config created | reject existing workspace | I,E |
+| `tastekit init` | workspace + config created (including `general-agent`) | reject existing workspace | I,E |
 | `tastekit onboard` | covered indirectly in live checks | missing workspace/config/provider | I (error), pre-release live |
 | `tastekit compile` | compile + resume path | missing session/workspace | U,I,E |
 | `tastekit export` | all adapters + agents-md + agent-file | missing artifacts/invalid target | I,E |
@@ -37,3 +37,7 @@ Legend:
 - `.tastekit/bindings.v1.json`
 - `.tastekit/ops/session.json`
 - `.tastekit/ops/traces/*.trace.v1.jsonl`
+
+## Domain Coverage Notes
+- Deterministic integration tests include non-interactive `general-agent` init.
+- Compiler module tests validate `general-agent` dedicated skills and playbooks.
