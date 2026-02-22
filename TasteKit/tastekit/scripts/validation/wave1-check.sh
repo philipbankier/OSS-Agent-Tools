@@ -155,7 +155,7 @@ mkdir -p "$MCP_WS/.tastekit"
   "${CLI[@]}" mcp add node --name mock --args "$MCP_FIXTURE" >/dev/null
   "${CLI[@]}" mcp inspect mock >/dev/null
   "${CLI[@]}" mcp bind --server mock >/dev/null
-  require_file "$MCP_WS/.tastekit/artifacts/bindings.v1.json"
+  require_any_file "$MCP_WS/.tastekit/bindings.v1.json" "$MCP_WS/.tastekit/artifacts/bindings.v1.json"
 )
 
 echo "[wave1] completion and simulate contract"

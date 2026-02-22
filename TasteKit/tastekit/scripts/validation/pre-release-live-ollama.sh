@@ -105,12 +105,18 @@ NODE
     fi
 
     echo "[live] domain=$domain seed session replay"
-    session_fixture="$ROOT_DIR/fixtures/validation/wave1/domains/$domain/workspace/.tastekit/session.json"
-    if [[ ! -f "$session_fixture" ]]; then
-      echo "missing session fixture: $session_fixture" >&2
+    session_fixture_v2="$ROOT_DIR/fixtures/validation/wave1/domains/$domain/workspace/.tastekit/ops/session.json"
+    session_fixture_v1="$ROOT_DIR/fixtures/validation/wave1/domains/$domain/workspace/.tastekit/session.json"
+    if [[ -f "$session_fixture_v2" ]]; then
+      session_fixture="$session_fixture_v2"
+    elif [[ -f "$session_fixture_v1" ]]; then
+      session_fixture="$session_fixture_v1"
+    else
+      echo "missing session fixture: $session_fixture_v2 (or legacy $session_fixture_v1)" >&2
       exit 1
     fi
-    cp "$session_fixture" "$workspace/.tastekit/session.json"
+    mkdir -p "$workspace/.tastekit/ops"
+    cp "$session_fixture" "$workspace/.tastekit/ops/session.json"
 
     echo "[live] domain=$domain compile/graph/export"
     if ! "${CLI[@]}" compile --resume >/tmp/tastekit-live-compile.log 2>&1; then

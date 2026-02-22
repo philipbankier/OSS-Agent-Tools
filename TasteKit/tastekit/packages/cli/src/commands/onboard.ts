@@ -1,6 +1,6 @@
 import { Command, createOption } from 'commander';
-import { existsSync, readFileSync } from 'fs';
-import { join } from 'path';
+import { existsSync, mkdirSync, readFileSync } from 'fs';
+import { dirname, join } from 'path';
 import inquirer from 'inquirer';
 import chalk from 'chalk';
 import ora from 'ora';
@@ -9,6 +9,7 @@ import { createSession, loadSession, saveSession, Interviewer, DomainRubric } fr
 import { resolveProvider, autoDetectProvider } from '@tastekit/core/llm';
 import { getDomainRubric } from '@tastekit/core/domains';
 import { WorkspaceConfig, InterviewState } from '@tastekit/core/schemas';
+import { resolveSessionPath } from '@tastekit/core/utils';
 import { detail, hint, handleError } from '../ui.js';
 
 export const onboardCommand = new Command('onboard')
@@ -19,7 +20,7 @@ export const onboardCommand = new Command('onboard')
   .action(async (options) => {
     const workspacePath = join(process.cwd(), '.tastekit');
     const configPath = join(workspacePath, 'tastekit.yaml');
-    const sessionPath = join(workspacePath, 'session.json');
+    const sessionPath = resolveSessionPath(workspacePath);
 
     if (!existsSync(workspacePath)) {
       console.error(chalk.red('No TasteKit workspace found. Run'), chalk.bold('tastekit init'), chalk.red('first.'));
@@ -30,6 +31,7 @@ export const onboardCommand = new Command('onboard')
       console.error(chalk.red('No tastekit.yaml found. Run'), chalk.bold('tastekit init'), chalk.red('first.'));
       process.exit(1);
     }
+    mkdirSync(dirname(sessionPath), { recursive: true });
 
     // Load config
     const config: WorkspaceConfig = YAML.parse(readFileSync(configPath, 'utf-8'));
@@ -127,7 +129,7 @@ export const onboardCommand = new Command('onboard')
       console.log(chalk.bold.green('\nOnboarding complete!'));
       detail('Dimensions covered', `${covered}/${total}${skipped > 0 ? ` (${skipped} skipped)` : ''}`);
       detail('Principles extracted', String(structuredAnswers.principles?.length ?? 0));
-      detail('Session saved to', '.tastekit/session.json');
+      detail('Session saved to', '.tastekit/ops/session.json');
       console.log('');
       hint('tastekit compile', 'generate your taste artifacts');
 

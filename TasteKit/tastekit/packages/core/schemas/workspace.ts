@@ -21,7 +21,7 @@ export const WorkspaceConfigSchema = z.object({
   onboarding: z.object({
     depth: z.enum(['quick', 'guided', 'operator']),
     completed: z.boolean().default(false),
-    session_path: z.string().optional().describe('Path to session.json'),
+    session_path: z.string().optional().describe('Path to canonical ops/session.json'),
   }).optional(),
 
   compilation: z.object({
@@ -94,7 +94,7 @@ export const InterviewStateSchema = z.object({
 /**
  * Session State Schema
  *
- * Resumable onboarding state (.tastekit/session.json)
+ * Resumable onboarding state (canonical: .tastekit/ops/session.json, fallback: .tastekit/session.json)
  * All new fields are optional for backward compatibility with old sessions.
  */
 export const SessionStateSchema = z.object({

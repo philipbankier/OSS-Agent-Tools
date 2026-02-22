@@ -22,7 +22,7 @@ describe('tastekit mcp', () => {
 
       const bind = await runCli(['mcp', 'bind', '--server', 'mock'], { cwd: root, timeoutMs: 45000 });
       expect(bind.code).toBe(0);
-      expect(existsSync(join(root, '.tastekit', 'artifacts', 'bindings.v1.json'))).toBe(true);
+      expect(existsSync(join(root, '.tastekit', 'bindings.v1.json'))).toBe(true);
     } finally {
       cleanupWorkspace(root);
     }

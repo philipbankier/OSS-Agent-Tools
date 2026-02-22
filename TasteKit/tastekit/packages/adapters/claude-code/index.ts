@@ -11,7 +11,7 @@ import { TasteKitAdapter, ExportOpts, InstallOpts } from '../adapter-interface.j
 import { readFileSync, writeFileSync, cpSync, existsSync, mkdirSync, chmodSync } from 'fs';
 import { join } from 'path';
 import { createRequire } from 'node:module';
-import { resolveArtifactPath, resolveSkillsPath } from '@tastekit/core/utils';
+import { resolveArtifactPath, resolveBindingsPath, resolveSkillsPath } from '@tastekit/core/utils';
 import { generateClaudeMd, generateHooks, type GeneratorContext } from '@tastekit/core/generators';
 
 const require = createRequire(import.meta.url);
@@ -111,7 +111,7 @@ export class ClaudeCodeAdapter implements TasteKitAdapter {
     }
 
     // Bindings
-    const bindingsPath = join(profilePath, 'bindings.v1.yaml');
+    const bindingsPath = resolveBindingsPath(profilePath);
     if (existsSync(bindingsPath)) {
       ctx.bindings = tryParseYamlOrJson(bindingsPath);
     }

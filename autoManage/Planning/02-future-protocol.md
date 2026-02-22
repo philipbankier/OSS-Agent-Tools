@@ -261,8 +261,9 @@ Commands that target multiple agents simultaneously. Not needed at 1-5 agent sca
 
 ### Relationship to TasteKit Trace Events
 - `AgentStatusReport.metrics` is a summary derived from `TraceEvent` data — not a replacement
-- The full trace JSONL is still the source of truth for detailed analysis
+- The full trace JSONL (`.tastekit/ops/traces/*.trace.v1.jsonl` canonical) is still the source of truth for detailed analysis
 - autoManage stores full trace events (via file-watching or streaming) alongside status summaries
+- Runtime parsing should be tolerant of unknown trace payload fields/event substructures; strict contract checks belong in CI conformance tests
 
 ### Go Reporter (AutoClaw)
 - The protocol is language-agnostic (JSON over WebSocket)

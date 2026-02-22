@@ -3,6 +3,7 @@ import chalk from 'chalk';
 import ora from 'ora';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
+import { resolveBindingsPath } from '@tastekit/core/utils';
 import { getGlobalOptions, riskColor, header, detail, hint, table, handleError, jsonOutput, verbose } from '../ui.js';
 
 interface MCPServerRegistry {
@@ -255,10 +256,12 @@ const mcpBindCommand = new Command('bind')
         servers: allBindings,
       };
 
-      const artifactsDir = join(process.cwd(), '.tastekit', 'artifacts');
-      mkdirSync(artifactsDir, { recursive: true });
+      const workspacePath = join(process.cwd(), '.tastekit');
+      const bindingsPath = join(workspacePath, 'bindings.v1.json');
+      const priorBindingsPath = resolveBindingsPath(workspacePath);
+      mkdirSync(workspacePath, { recursive: true });
       writeFileSync(
-        join(artifactsDir, 'bindings.v1.json'),
+        bindingsPath,
         JSON.stringify(bindingsArtifact, null, 2),
         'utf-8'
       );
@@ -270,7 +273,10 @@ const mcpBindCommand = new Command('bind')
         jsonOutput(bindingsArtifact);
       }
 
-      detail('Bindings saved to', '.tastekit/artifacts/bindings.v1.json');
+      detail('Bindings saved to', '.tastekit/bindings.v1.json');
+      if (priorBindingsPath !== bindingsPath && existsSync(priorBindingsPath)) {
+        detail('Legacy bindings detected', priorBindingsPath);
+      }
     } catch (error) {
       handleError(error, spinner);
     }

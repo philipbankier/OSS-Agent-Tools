@@ -8,6 +8,7 @@ echo "[pr-gate] starting deterministic gate"
 cd "$ROOT_DIR"
 
 bash "$ROOT_DIR/scripts/validation/wave1-check.sh"
+bash "$ROOT_DIR/scripts/validation/contract-conformance.sh"
 
 END_TS="$(date +%s)"
 ELAPSED="$((END_TS - START_TS))"
