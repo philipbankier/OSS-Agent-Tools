@@ -1,0 +1,30 @@
+{
+  "name": "quickclaw",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Full-auto OpenClaw agent setup and ops provisioning",
+  "type": "module",
+  "bin": {
+    "quickclaw": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "dev": "tsx src/cli.ts"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "dependencies": {
+    "commander": "^14.0.0",
+    "inquirer": "^12.0.0",
+    "yaml": "^2.8.1",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.0",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2",
+    "vitest": "^2.1.9"
+  }
+}
