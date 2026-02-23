@@ -2,11 +2,54 @@
 
 Last updated: 2026-02-19
 
-This roadmap has two parallel tracks:
+This roadmap has three parallel tracks:
 - **Track A**: TasteKit + AutoClaw (taste compiler → agent runtime)
 - **Track B**: autoManage (management dashboard for agent oversight)
+- **Track C**: QuickClaw (full-auto OpenClaw setup + ops provisioning)
 
 Track B depends only on Track A Phase 1 (complete). It can proceed independently.
+Track C depends on stable OpenClaw CLI and partial TasteKit reuse. It can proceed independently.
+
+---
+
+# Track C: QuickClaw
+
+## Phase 1: Core CLI Foundation (IN PROGRESS)
+
+Goal: `quickclaw create|verify|export-config` command surface exists with schema validation and report outputs.
+
+- [x] Scaffold top-level TypeScript CLI project (`QuickClaw/`)
+- [x] Implement config schema (`quickclaw.v1`) with zod validation
+- [x] Add wizard intake + config file mode
+- [x] Add report outputs under `<workspace>/.quickclaw/`
+- [x] Implement preflight checks (binaries, Node version, secrets)
+
+## Phase 2: Full Provisioning Flow (IN PROGRESS)
+
+Goal: `quickclaw create` provisions OpenClaw and materializes workspace files.
+
+- [x] Run `openclaw onboard --non-interactive`
+- [x] Generate SOUL/AGENTS/MEMORY/IDENTITY/USER/HEARTBEAT workspace files
+- [x] Remove one-time `BOOTSTRAP.md` after materialization
+- [x] Add TasteKit bridge (`tastekit import` + `tastekit export` best-effort reuse)
+
+## Phase 3: Ops Enablement (IN PROGRESS)
+
+Goal: Generated setup includes coding ops, hooks/cron, and Sentry pipeline scaffolding.
+
+- [x] Generate coding scripts (worktree, ralph-loop, tmux health, notifier)
+- [x] Enable OpenClaw bundled hooks (`session-memory`, `command-logger`, `boot-md`, `bootstrap-extra-files`)
+- [x] Configure recurring cron jobs for extraction/check-in/monitoring
+- [x] Configure Slack + webhook transform + Sentry validation hooks
+
+## Phase 4: Verification & Quality (IN PROGRESS)
+
+Goal: Deterministic verification and tests for required behavior.
+
+- [x] Implement `quickclaw verify` with health/hooks/cron/route checks
+- [x] Add unit tests for config, preflight helpers, templates, parser logic, cron schedule conversion, and sentry transform
+- [ ] Add mocked integration tests for full `quickclaw create` execution path
+- [ ] Add sandboxed end-to-end tests for fresh + existing workspace scenarios
 
 ---
 
