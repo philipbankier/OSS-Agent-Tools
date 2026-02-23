@@ -76,7 +76,6 @@ describe('tastekit init', () => {
     try {
       const result = await runCli(['init', '--domain', 'general-agent', '--depth', 'guided'], {
         cwd: root,
-        input: '\n\n',
         env: {
           OLLAMA_MODEL: 'fixture-ollama-model',
           ANTHROPIC_API_KEY: undefined,

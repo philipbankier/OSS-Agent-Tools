@@ -78,41 +78,50 @@ export const initCommand = new Command('init')
 
       // LLM provider detection
       let llmConfig: LLMProviderConfig | undefined;
-      const detectSpinner = ora('Detecting LLM provider...').start();
-      try {
-        const detected = await autoDetectProvider();
-        detectSpinner.succeed(`Detected LLM provider: ${chalk.bold(detected.provider)}`);
+      const envOllamaModel = process.env.OLLAMA_MODEL?.trim();
+      if (envOllamaModel) {
+        llmConfig = {
+          provider: 'ollama',
+          model: envOllamaModel,
+          ...(process.env.OLLAMA_HOST?.trim() ? { base_url: process.env.OLLAMA_HOST.trim() } : {}),
+        };
+      } else {
+        const detectSpinner = ora('Detecting LLM provider...').start();
+        try {
+          const detected = await autoDetectProvider();
+          detectSpinner.succeed(`Detected LLM provider: ${chalk.bold(detected.provider)}`);
 
-        const { useDetected } = await inquirer.prompt([{
-          type: 'confirm',
-          name: 'useDetected',
-          message: `Use ${detected.provider} for onboarding interview?`,
-          default: true,
-        }]);
+          const { useDetected } = await inquirer.prompt([{
+            type: 'confirm',
+            name: 'useDetected',
+            message: `Use ${detected.provider} for onboarding interview?`,
+            default: true,
+          }]);
 
-        if (useDetected) {
-          if (detected.provider === 'ollama') {
-            const model = await resolvePreferredOllamaModel(detected.base_url);
-            if (model) {
-              llmConfig = { ...detected, model };
+          if (useDetected) {
+            if (detected.provider === 'ollama') {
+              const model = await resolvePreferredOllamaModel(detected.base_url);
+              if (model) {
+                llmConfig = { ...detected, model };
+              } else {
+                const { selectedModel } = await inquirer.prompt([{
+                  type: 'input',
+                  name: 'selectedModel',
+                  message: 'Ollama model name:',
+                  default: 'llama3.1',
+                }]);
+                llmConfig = { ...detected, model: selectedModel };
+              }
             } else {
-              const { selectedModel } = await inquirer.prompt([{
-                type: 'input',
-                name: 'selectedModel',
-                message: 'Ollama model name:',
-                default: 'llama3.1',
-              }]);
-              llmConfig = { ...detected, model: selectedModel };
+              llmConfig = detected;
             }
           } else {
-            llmConfig = detected;
+            llmConfig = await promptForProvider();
           }
-        } else {
+        } catch {
+          detectSpinner.warn('No LLM provider auto-detected');
           llmConfig = await promptForProvider();
         }
-      } catch {
-        detectSpinner.warn('No LLM provider auto-detected');
-        llmConfig = await promptForProvider();
       }
 
       // Create workspace structure (three-space layout)
