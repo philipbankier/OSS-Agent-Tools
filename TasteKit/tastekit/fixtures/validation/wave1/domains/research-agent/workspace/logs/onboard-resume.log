@@ -1,20 +1,28 @@
-spawn sh -lc cd '/Users/philipbankier/Development/OSS/Taste OSS/OSS-Agent-Tools-worktrees/tastekit-validation-wave1/TasteKit/tastekit/fixtures/validation/wave1/domains/research-agent/workspace' && node '/Users/philipbankier/Development/OSS/Taste OSS/OSS-Agent-Tools-worktrees/tastekit-validation-wave1/TasteKit/tastekit/packages/cli/dist/cli.js' onboard --resume
 - Connecting to LLM...
 ✔ Connected to ollama
 Resuming previous session...
 
 TasteKit Onboarding Interview
 
-Domain: research-agent | Depth: quick | LLM: ollama
+Domain: research-agent | Depth: guided | LLM: ollama
 Type /save to save and quit, /skip to skip a topic
 
-? You:? You: /? You: /s? You: /sk? You: /ski? You: /skip? You: /skip? You: /skip
+? You:[8G[9G[2K[G? You: /[9G[10G[2K[G? You: /s[10G[11G[2K[G? You: /sk[11G[12G[2K[G? You: /ski[12G[13G[2K[G? You: /skip[13G[8G[2K[G? You: /skip[13G[2K[G? You: /skip[13G
+[?25h
+  Got it — you’re prioritizing outcome over process for now. That’s totally fine.
 
-  Got it — we’ll skip that for now. Let’s jump into something more immediate.
+Let’s shift gears:  
+**What’s your ideal tone or voice for the agent’s output?**  
+(Think of it as: if you were describing your ideal research partner’s writing style — what adjectives would you use? Would you want it to be formal, punchy, conversational, or something else?)
 
-What’s the *one thing* you’d say makes a research output “good” — not just “correct,” but actually useful or valuable to you? What’s the non-negotiable?
-
-? You:? You: /? You: /s? You: /sa? You: /sav? You: /save? You: /save? You: /save
-
+? You:[8G[9G[2K[G? You: /[9G[10G[2K[G? You: /s[10G[11G[2K[G? You: /sa[11G[12G[2K[G? You: /sav[12G[13G[2K[G? You: /save[13G[8G[2K[G? You: /save[13G[2K[G? You: /save[13G
+[?25h
   Session saved. Run with --resume to continue later.
 
+
+Onboarding complete!
+  Dimensions covered: 1/19
+  Principles extracted: 0
+  Session saved to: .tastekit/ops/session.json
+
+  Run tastekit compile to generate your taste artifacts

@@ -7,7 +7,7 @@ if [[ $# -lt 1 ]]; then
 fi
 
 SCOPE="$1"
-BASE_BRANCH="${2:-claude/review-tastekit-openclaw-rWH3Y}"
+BASE_BRANCH="${2:-main}"
 BRANCH="codex/${SCOPE}"
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 WORKTREE_ROOT="/Users/philipbankier/Development/OSS/Taste OSS/OSS-Agent-Tools-worktrees"

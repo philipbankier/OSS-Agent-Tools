@@ -11,16 +11,16 @@ completed_steps:
   - memory
   - skills
   - playbooks
-created_at: 2026-02-20T20:27:53.040Z
+created_at: 2026-02-23T23:27:51.675Z
 dimension_resolutions:
   - anti_signals: []
-    confidence: 0.6
+    confidence: 1.8
     dimension_id: core_purpose
     extracted_facts:
-      - goal is problem-solving oriented
-    summary: User is framing a research goal, likely personal or professional
+      - User expects concise, actionable output.
+    summary: User wants research summaries with clear recommendations and source links.
   - anti_signals: []
-    confidence: 0
+    confidence: 0.2
     dimension_id: guiding_principles
     extracted_facts: []
     summary: ""
@@ -36,9 +36,20 @@ dimension_resolutions:
     summary: ""
   - anti_signals: []
     confidence: 0
-    dimension_id: research_methodology
+    dimension_id: accuracy_evidence
     extracted_facts: []
     summary: ""
+  - anti_signals: []
+    confidence: 0
+    dimension_id: hard_boundaries
+    extracted_facts: []
+    summary: ""
+  - anti_signals: []
+    confidence: 0.7
+    dimension_id: research_methodology
+    extracted_facts:
+      - User describes research as goal-oriented with clear outcomes.
+    summary: User likely follows a hypothesis-driven or question-first approach.
   - anti_signals: []
     confidence: 0
     dimension_id: source_preferences
@@ -59,10 +70,50 @@ dimension_resolutions:
     dimension_id: depth_vs_breadth
     extracted_facts: []
     summary: ""
+  - anti_signals: []
+    confidence: 0
+    dimension_id: citation_standards
+    extracted_facts: []
+    summary: ""
+  - anti_signals: []
+    confidence: 0
+    dimension_id: bias_awareness
+    extracted_facts: []
+    summary: ""
+  - anti_signals: []
+    confidence: 0
+    dimension_id: data_interpretation
+    extracted_facts: []
+    summary: ""
+  - anti_signals: []
+    confidence: 0
+    dimension_id: competitive_analysis_style
+    extracted_facts: []
+    summary: ""
+  - anti_signals: []
+    confidence: 0
+    dimension_id: temporal_scope
+    extracted_facts: []
+    summary: ""
+  - anti_signals: []
+    confidence: 0
+    dimension_id: cross_referencing
+    extracted_facts: []
+    summary: ""
+  - anti_signals: []
+    confidence: 0
+    dimension_id: fact_checking_rigor
+    extracted_facts: []
+    summary: ""
+  - anti_signals: []
+    confidence: 0
+    dimension_id: research_tools
+    extracted_facts: []
+    summary: ""
 domain_id: research-agent
 generator_version: 0.5.0
 schema_version: derivation.v1
-session_id: ab610664-b017-430e-8100-93faa88be095
+session_id: 38e251a2-942b-4a7c-b05b-cda628e27ddd
 structured_answers:
   domain_specific: {}
   evidence_policy:

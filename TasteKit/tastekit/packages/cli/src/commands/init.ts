@@ -9,6 +9,10 @@ import { listDomains, getDomainRubric } from '@tastekit/core/domains';
 import { autoDetectProvider, LLMProviderConfig } from '@tastekit/core/llm';
 import { detail, hint, handleError } from '../ui.js';
 
+interface OllamaTagsResponse {
+  models?: Array<{ name?: string; model?: string }>;
+}
+
 export const initCommand = new Command('init')
   .description('Initialize a new TasteKit workspace')
   .argument('[path]', 'Path to initialize workspace', '.')
@@ -74,26 +78,50 @@ export const initCommand = new Command('init')
 
       // LLM provider detection
       let llmConfig: LLMProviderConfig | undefined;
-      const detectSpinner = ora('Detecting LLM provider...').start();
-      try {
-        const detected = await autoDetectProvider();
-        detectSpinner.succeed(`Detected LLM provider: ${chalk.bold(detected.provider)}`);
+      const envOllamaModel = process.env.OLLAMA_MODEL?.trim();
+      if (envOllamaModel) {
+        llmConfig = {
+          provider: 'ollama',
+          model: envOllamaModel,
+          ...(process.env.OLLAMA_HOST?.trim() ? { base_url: process.env.OLLAMA_HOST.trim() } : {}),
+        };
+      } else {
+        const detectSpinner = ora('Detecting LLM provider...').start();
+        try {
+          const detected = await autoDetectProvider();
+          detectSpinner.succeed(`Detected LLM provider: ${chalk.bold(detected.provider)}`);
 
-        const { useDetected } = await inquirer.prompt([{
-          type: 'confirm',
-          name: 'useDetected',
-          message: `Use ${detected.provider} for onboarding interview?`,
-          default: true,
-        }]);
+          const { useDetected } = await inquirer.prompt([{
+            type: 'confirm',
+            name: 'useDetected',
+            message: `Use ${detected.provider} for onboarding interview?`,
+            default: true,
+          }]);
 
-        if (useDetected) {
-          llmConfig = detected;
-        } else {
+          if (useDetected) {
+            if (detected.provider === 'ollama') {
+              const model = await resolvePreferredOllamaModel(detected.base_url);
+              if (model) {
+                llmConfig = { ...detected, model };
+              } else {
+                const { selectedModel } = await inquirer.prompt([{
+                  type: 'input',
+                  name: 'selectedModel',
+                  message: 'Ollama model name:',
+                  default: 'llama3.1',
+                }]);
+                llmConfig = { ...detected, model: selectedModel };
+              }
+            } else {
+              llmConfig = detected;
+            }
+          } else {
+            llmConfig = await promptForProvider();
+          }
+        } catch {
+          detectSpinner.warn('No LLM provider auto-detected');
           llmConfig = await promptForProvider();
         }
-      } catch {
-        detectSpinner.warn('No LLM provider auto-detected');
-        llmConfig = await promptForProvider();
       }
 
       // Create workspace structure (three-space layout)
@@ -147,10 +175,12 @@ export const initCommand = new Command('init')
   });
 
 async function promptForProvider(): Promise<LLMProviderConfig> {
+  const preferredFromEnv = process.env.OLLAMA_MODEL?.trim();
   const { provider } = await inquirer.prompt([{
     type: 'list',
     name: 'provider',
     message: 'Select your LLM provider:',
+    default: preferredFromEnv ? 'ollama' : undefined,
     choices: [
       { name: 'Anthropic (Claude)', value: 'anthropic' },
       { name: 'OpenAI (GPT-4)', value: 'openai' },
@@ -161,11 +191,12 @@ async function promptForProvider(): Promise<LLMProviderConfig> {
   const config: LLMProviderConfig = { provider };
 
   if (provider === 'ollama') {
+    const suggestedModel = await resolvePreferredOllamaModel();
     const { model } = await inquirer.prompt([{
       type: 'input',
       name: 'model',
       message: 'Ollama model name:',
-      default: 'llama3.1',
+      default: suggestedModel ?? 'llama3.1',
     }]);
     if (model) config.model = model;
   } else {
@@ -176,4 +207,30 @@ async function promptForProvider(): Promise<LLMProviderConfig> {
   }
 
   return config;
+}
+
+export async function detectInstalledOllamaModel(baseUrl = 'http://localhost:11434'): Promise<string | undefined> {
+  try {
+    const response = await fetch(`${baseUrl}/api/tags`, {
+      signal: AbortSignal.timeout(2000),
+    });
+    if (!response.ok) {
+      return undefined;
+    }
+
+    const data = await response.json() as OllamaTagsResponse;
+    const model = data.models?.find((entry) => entry.name || entry.model);
+    const resolved = (model?.name ?? model?.model)?.trim();
+    return resolved && resolved.length > 0 ? resolved : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export async function resolvePreferredOllamaModel(baseUrl?: string): Promise<string | undefined> {
+  const fromEnv = process.env.OLLAMA_MODEL?.trim();
+  if (fromEnv) {
+    return fromEnv;
+  }
+  return await detectInstalledOllamaModel(baseUrl);
 }

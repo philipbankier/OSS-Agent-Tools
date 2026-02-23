@@ -4,8 +4,12 @@ skills:
       - claude-code
       - openclaw
       - manus
+    context_model: inherit
     description: Gather and synthesize information from web sources on a given topic
+    feeds_into:
+      - competitive-analysis
     name: Web Research
+    pipeline_phase: capture
     required_tools:
       - web-search
     risk_level: low
@@ -18,8 +22,12 @@ skills:
       - claude-code
       - openclaw
       - manus
+    context_model: inherit
     description: Analyze competitors and market landscape with structured comparison frameworks
     name: Competitive Analysis
+    pipeline_phase: process
+    prerequisites:
+      - web-research
     required_tools:
       - web-search
     risk_level: low

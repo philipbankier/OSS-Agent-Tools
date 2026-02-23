@@ -6,18 +6,48 @@ import chalk from 'chalk';
 import ora from 'ora';
 import YAML from 'yaml';
 import { createSession, loadSession, saveSession, Interviewer, DomainRubric } from '@tastekit/core/interview';
-import { resolveProvider, autoDetectProvider } from '@tastekit/core/llm';
+import { resolveProvider, autoDetectProvider, type LLMProviderConfig } from '@tastekit/core/llm';
 import { getDomainRubric } from '@tastekit/core/domains';
 import { WorkspaceConfig, InterviewState } from '@tastekit/core/schemas';
 import { resolveSessionPath } from '@tastekit/core/utils';
 import { detail, hint, handleError } from '../ui.js';
+
+interface OnboardOptions {
+  depth?: 'quick' | 'guided' | 'operator';
+  resume?: boolean;
+  provider?: string;
+}
+
+export function resolveOnboardProviderConfig(
+  configured: WorkspaceConfig['llm_provider'],
+  providerOverride?: string,
+): LLMProviderConfig | undefined {
+  if (!providerOverride) {
+    return configured;
+  }
+
+  const overrideProvider = providerOverride as LLMProviderConfig['provider'];
+
+  // Preserve configured provider settings when the override only reaffirms provider choice.
+  if (configured?.provider === overrideProvider) {
+    return {
+      provider: overrideProvider,
+      ...(configured.model ? { model: configured.model } : {}),
+      ...(configured.base_url ? { base_url: configured.base_url } : {}),
+      ...(configured.api_key_env ? { api_key_env: configured.api_key_env } : {}),
+    };
+  }
+
+  // Cross-provider override should not leak stale provider-specific settings.
+  return { provider: overrideProvider };
+}
 
 export const onboardCommand = new Command('onboard')
   .description('Run the LLM-driven onboarding interview')
   .addOption(createOption('--depth <type>', 'Override depth').choices(['quick', 'guided', 'operator']))
   .option('--resume', 'Resume from previous session')
   .option('--provider <name>', 'Override LLM provider: anthropic, openai, ollama')
-  .action(async (options) => {
+  .action(async (options: OnboardOptions) => {
     const workspacePath = join(process.cwd(), '.tastekit');
     const configPath = join(workspacePath, 'tastekit.yaml');
     const sessionPath = resolveSessionPath(workspacePath);
@@ -46,9 +76,8 @@ export const onboardCommand = new Command('onboard')
     // Resolve LLM provider
     const spinner = ora('Connecting to LLM...').start();
     try {
-      const providerConfig = options.provider
-        ? { provider: options.provider as 'anthropic' | 'openai' | 'ollama' | 'custom' }
-        : config.llm_provider ?? await autoDetectProvider();
+      const providerConfig = resolveOnboardProviderConfig(config.llm_provider, options.provider)
+        ?? await autoDetectProvider();
       const llm = await resolveProvider(providerConfig);
       spinner.succeed(`Connected to ${chalk.bold(llm.name)}`);
 
