@@ -1,0 +1,36 @@
+name: QuickClaw PR Gate
+
+on:
+  pull_request:
+    paths:
+      - 'QuickClaw/**'
+      - '.github/workflows/quickclaw-pr.yml'
+
+jobs:
+  deterministic-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.29.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: QuickClaw/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm --dir QuickClaw install
+
+      - name: Build
+        run: pnpm --dir QuickClaw build
+
+      - name: Test
+        run: pnpm --dir QuickClaw test

@@ -211,4 +211,58 @@ describe('quickclaw create sandboxed e2e (mocked binaries)', () => {
     expect(existsSync(path.join(workspace, 'BOOTSTRAP.md'))).toBe(false);
     expect(existsSync(path.join(workspace, '.quickclaw', 'apply-report.v1.json'))).toBe(true);
   });
+
+  it('is idempotent when run repeatedly against the same workspace', async () => {
+    const workspace = path.join(tempRoot, 'idempotent-workspace');
+    const configPath = writeConfig(tempRoot, workspace);
+
+    await runCreate(['--config', configPath, '--json']);
+    await runCreate(['--config', configPath, '--json']);
+
+    const applyReportPath = path.join(workspace, '.quickclaw', 'apply-report.v1.json');
+    const planReportPath = path.join(workspace, '.quickclaw', 'plan-report.v1.json');
+    expect(existsSync(planReportPath)).toBe(true);
+    expect(existsSync(applyReportPath)).toBe(true);
+    expect(readFileSync(path.join(workspace, 'AGENTS.md'), 'utf-8')).toContain('apply-docs');
+    expect(onboardMocks.runOpenClawOnboard).toHaveBeenCalledTimes(2);
+  });
+
+  it('marks apply as failed and sets exit code when downstream steps fail', async () => {
+    const workspace = path.join(tempRoot, 'failure-workspace');
+    const configPath = writeConfig(tempRoot, workspace);
+
+    hooksMocks.setupHooks.mockResolvedValueOnce([
+      { hook: 'session-memory', ok: false, details: 'failed to enable' },
+    ]);
+    cronMocks.setupCronJobs.mockResolvedValueOnce([
+      { name: 'quickclaw-nightly-extraction', ok: false, details: 'permission denied' },
+    ]);
+    sentryMocks.setupSentryPipeline.mockResolvedValueOnce({
+      configPath: '/tmp/openclaw.json',
+      transformPath: '/tmp/hook-transform.js',
+      sentryApiValidated: false,
+      alertRuleConfigured: false,
+      webhookSmokeTest: false,
+      details: ['missing sentry token'],
+    });
+    tastekitMocks.runTasteKitBridge.mockResolvedValueOnce({
+      ok: false,
+      details: 'tastekit unavailable',
+    });
+
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    await runCreate(['--config', configPath, '--json']);
+    const output = JSON.parse(String(logSpy.mock.calls.at(-1)?.[0] ?? '{}')) as {
+      success: boolean;
+      actions: Array<{ id: string; ok: boolean; details?: string }>;
+    };
+    logSpy.mockRestore();
+
+    expect(output.success).toBe(false);
+    expect(output.actions.some((action) => action.id === 'hooks' && action.ok === false)).toBe(true);
+    expect(output.actions.some((action) => action.id === 'cron' && action.ok === false)).toBe(true);
+    expect(output.actions.some((action) => action.id === 'sentry_pipeline' && action.ok === false)).toBe(true);
+    expect(output.actions.some((action) => action.id === 'tastekit_bridge' && action.ok === false)).toBe(true);
+    expect(process.exitCode).toBe(1);
+  });
 });
