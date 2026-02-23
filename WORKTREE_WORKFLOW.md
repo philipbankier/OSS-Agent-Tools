@@ -3,7 +3,7 @@
 This repository uses a trunk + short-lived feature worktree model.
 
 ## Conventions
-- Trunk branch: `claude/review-tastekit-openclaw-rWH3Y`
+- Trunk branch: `main`
 - Feature branch format: `codex/<scope>`
 - Worktree root: `/Users/philipbankier/Development/OSS/Taste OSS/OSS-Agent-Tools-worktrees/`
 
@@ -24,7 +24,7 @@ Examples:
 This creates:
 - Branch: `codex/<scope>`
 - Worktree path: `/Users/philipbankier/Development/OSS/Taste OSS/OSS-Agent-Tools-worktrees/<scope>`
-- Base branch default: `claude/review-tastekit-openclaw-rWH3Y`
+- Base branch default: `main`
 
 ## Day-to-day usage
 - Keep the trunk worktree clean.

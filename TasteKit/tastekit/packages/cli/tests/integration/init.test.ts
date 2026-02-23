@@ -69,4 +69,28 @@ describe('tastekit init', () => {
       cleanupWorkspace(root);
     }
   });
+
+  it('writes explicit Ollama model from OLLAMA_MODEL env', async () => {
+    const root = makeTempWorkspace('init-ollama-model');
+
+    try {
+      const result = await runCli(['init', '--domain', 'general-agent', '--depth', 'guided'], {
+        cwd: root,
+        input: '\n\n',
+        env: {
+          OLLAMA_MODEL: 'fixture-ollama-model',
+          ANTHROPIC_API_KEY: undefined,
+          OPENAI_API_KEY: undefined,
+        },
+        timeoutMs: 45000,
+      });
+
+      expect(result.code).toBe(0);
+      const config = readFileSync(join(root, '.tastekit', 'tastekit.yaml'), 'utf-8');
+      expect(config).toContain('provider: ollama');
+      expect(config).toContain('model: fixture-ollama-model');
+    } finally {
+      cleanupWorkspace(root);
+    }
+  });
 });

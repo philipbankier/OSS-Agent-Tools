@@ -3,6 +3,10 @@
 ## Goal
 Validate TasteKit usability and reliability on three production-relevant domains before new feature expansion.
 
+## Current Status
+- Last full interactive rerun: 2026-02-23 (`codex/tastekit-wave1-closure-p1p2`)
+- Status: Wave-1 closure complete (no open P0/P1 from original backlog)
+
 ## Locked Scope
 - Domains:
   - `development-agent`
@@ -22,9 +26,9 @@ Validate TasteKit usability and reliability on three production-relevant domains
 ## Fixture Layout
 - Root: `fixtures/validation/wave1/domains/<domain>/workspace/`
 - Includes per domain:
-  - `.tastekit/session.json` (sanitized)
+  - `.tastekit/ops/session.json` (sanitized canonical path)
   - generated artifacts under `.tastekit/self`, `.tastekit/knowledge`, `.tastekit/ops`
-  - deterministic synthetic traces in `.tastekit/traces/synthetic.jsonl`
+  - deterministic synthetic traces in `.tastekit/ops/traces/*.trace.v1.jsonl` (legacy `.tastekit/traces/` tolerated for compatibility tests)
   - exports under `exports/{claude-code,openclaw,manus}`
   - run logs under `logs/`
 
@@ -35,10 +39,10 @@ Validate TasteKit usability and reliability on three production-relevant domains
    - `pnpm --filter @tastekit/core test`
    - `pnpm --filter @tastekit/cli build`
 2. Domain run (live + scripted):
-   - `tastekit init --domain <domain> --depth quick`
-   - `tastekit onboard` (live Ollama connection, scripted `/save`)
-   - `tastekit onboard --resume` (scripted `/skip` then `/save`)
-   - `tastekit compile`
+   - `tastekit init --domain <domain> --depth guided`
+   - `tastekit onboard --provider ollama` (live interactive, `/save`)
+   - `tastekit onboard --resume --provider ollama` (`/skip` then `/save`)
+   - `tastekit compile --resume`
    - `tastekit skills graph`
    - `tastekit export --target <adapter>` for all adapters in scope
 3. Drift loop sanity:
@@ -54,5 +58,5 @@ Validate TasteKit usability and reliability on three production-relevant domains
 - Findings are recorded with severity (`P0`, `P1`, `P2`) and next PR slices.
 
 ## Notes
-- Wave-1 is stabilization and validation only. Any `P0/P1` fixes are split into follow-up implementation PRs.
+- Wave-1 is stabilization and validation only. Historical `P0/P1` fixes are expected to land before starting feature expansion.
 - AutoClaw implementation work remains deferred while local Go toolchain is unavailable.

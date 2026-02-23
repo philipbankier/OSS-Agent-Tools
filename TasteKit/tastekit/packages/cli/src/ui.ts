@@ -22,11 +22,22 @@ export interface GlobalOptions {
  * Extract --json and --verbose from the root program options.
  */
 export function getGlobalOptions(cmd: Command): GlobalOptions {
-  const root = cmd.parent ?? cmd;
-  const opts = root.opts();
+  let current: Command | null | undefined = cmd;
+  let json = false;
+  let verbose = false;
+
+  // Commander nests options by command level. Walk parents so both
+  // `tastekit --json skills list` and `tastekit skills list --json` work.
+  while (current) {
+    const opts = current.opts();
+    json = json || Boolean(opts.json);
+    verbose = verbose || Boolean(opts.verbose);
+    current = current.parent;
+  }
+
   return {
-    json: Boolean(opts.json),
-    verbose: Boolean(opts.verbose),
+    json,
+    verbose,
   };
 }
 

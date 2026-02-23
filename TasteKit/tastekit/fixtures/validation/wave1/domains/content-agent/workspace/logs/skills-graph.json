@@ -1,12 +1,15 @@
-
-Skill Graph Analysis
-
-  Nodes: 2
-  Edges: 0
-  Density: 0.000
-
-  Orphans (no relationships)
-    research-trends
-    generate-post-options
-
-  No issues found.
+{
+  "node_count": 2,
+  "edge_count": 1,
+  "density": 0.5,
+  "orphans": [],
+  "hubs": [],
+  "pipelines": [
+    [
+      "research-trends",
+      "generate-post-options"
+    ]
+  ],
+  "cycles": [],
+  "missing_refs": []
+}
