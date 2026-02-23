@@ -11,7 +11,7 @@ TasteKit is an open-source CLI tool and library that captures a user's preferenc
 ## Features
 
 - **LLM-driven onboarding** — Adaptive interview that explores your preferences across domain-specific dimensions, not static forms
-- **5 agent domains** — Content, Development, Research, Sales, and Support agents with specialized rubrics and skills
+- **6 agent domains** — General, Content, Development, Research, Sales, and Support agents with specialized rubrics and skills
 - **Artifact-first compilation** — Everything compiles into JSON/YAML files; adapters map files to runtime format
 - **Skills with progressive disclosure** — SKILL.md files with three tiers: minimal context (always loaded), on-invoke, and on-demand
 - **MCP-first tool binding** — Discover, inspect, and bind tools via Model Context Protocol
@@ -47,7 +47,7 @@ tastekit export --target claude-code
 tastekit export --target openclaw
 
 # 5. (Optional) Add MCP tools
-tastekit mcp add npx @anthropic/mcp-server-filesystem
+tastekit mcp add npx --name filesystem --args "-y,@modelcontextprotocol/server-filesystem,."
 tastekit mcp inspect filesystem
 tastekit mcp bind
 
@@ -128,10 +128,11 @@ After running `tastekit compile`, TasteKit supports both legacy flat (`v1`) and 
 
 ## Agent Domains
 
-TasteKit ships with 5 fully implemented domains, each with specialized rubrics, interview dimensions, skills, and playbooks:
+TasteKit ships with 6 fully implemented domains, each with specialized rubrics, interview dimensions, skills, and playbooks:
 
 | Domain | Rubric Dimensions | Built-in Skills | Playbooks |
 |:---|:---:|:---:|:---:|
+| General Agent | 18 | 2 | 2 |
 | Content Agent | 16 | 2 | 3 |
 | Development Agent | 24 | 2 | 2 |
 | Research Agent | 18 | 2 | 2 |

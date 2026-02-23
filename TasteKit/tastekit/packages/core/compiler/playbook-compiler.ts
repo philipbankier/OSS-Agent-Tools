@@ -70,6 +70,8 @@ async function resolveDomainPlaybooks(domainId?: string): Promise<DomainPlaybook
       return getSalesAgentPlaybooks();
     case 'support-agent':
       return getSupportAgentPlaybooks();
+    case 'general-agent':
+      return getGeneralAgentPlaybooks();
     default:
       return [];
   }
@@ -899,6 +901,191 @@ function getSupportAgentPlaybooks(): DomainPlaybook[] {
             escalation_id: 'critical-severity',
             trigger: 'Severity is critical (data loss, security breach, complete outage)',
             approval_ref: 'guardrails.approval_rules.critical_escalation',
+          },
+        ],
+      },
+    },
+  ];
+}
+
+/**
+ * General agent playbooks — reusable workflows for broad, mixed workloads.
+ */
+function getGeneralAgentPlaybooks(): DomainPlaybook[] {
+  return [
+    {
+      playbook: {
+        schema_version: 'playbook.v1',
+        id: 'general-task-execution',
+        name: 'General Task Execution',
+        description: 'Synthesize context, orchestrate execution, and close with a concise delivery summary.',
+        triggers: [{ type: 'manual' }],
+        inputs: [
+          { name: 'goal', type: 'string', required: true, description: 'Desired outcome to achieve' },
+          { name: 'context_sources', type: 'string', required: false, description: 'Relevant files/notes/links to ground the task' },
+          { name: 'constraints', type: 'string', required: false, description: 'Policy, timeline, budget, or tooling constraints' },
+        ],
+        steps: [
+          {
+            step_id: 'synthesize-context',
+            type: 'tool',
+            tool_ref: 'skill:context-synthesis',
+            params_template: {
+              question: '{{goal}}',
+              sources: '{{context_sources}}',
+            },
+            outputs: ['context_brief'],
+          },
+          {
+            step_id: 'plan-work',
+            type: 'think',
+            params_template: {
+              goal: '{{goal}}',
+              constraints: '{{constraints}}',
+              context: '{{context_brief}}',
+            },
+            outputs: ['execution_plan'],
+          },
+          {
+            step_id: 'execute-work',
+            type: 'tool',
+            tool_ref: 'skill:task-orchestration',
+            params_template: {
+              goal: '{{goal}}',
+              constraints: '{{constraints}}',
+              context_snapshot: '{{context_brief}}',
+            },
+            outputs: ['execution_result'],
+          },
+          {
+            step_id: 'approval-checkpoint',
+            type: 'approval_gate',
+            params_template: {
+              message: 'Review execution summary before final delivery.',
+              summary: '{{execution_result}}',
+            },
+            outputs: ['approved_result'],
+          },
+          {
+            step_id: 'finalize',
+            type: 'write',
+            params_template: {
+              content: '{{approved_result}}',
+              format: 'operator_summary',
+            },
+            outputs: ['final_output'],
+          },
+        ],
+        checks: [
+          {
+            check_id: 'goal-alignment',
+            type: 'taste',
+            condition: 'Execution result directly addresses the user goal and operating principles',
+          },
+          {
+            check_id: 'risk-compliance',
+            type: 'safety',
+            condition: 'No taboo or high-risk action was executed without required escalation',
+          },
+          {
+            check_id: 'evidence-quality',
+            type: 'facts',
+            condition: 'Claims in the final output reflect context synthesis confidence and citation expectations',
+          },
+        ],
+        stop_conditions: [
+          {
+            condition: 'Critical context gaps remain unresolved after synthesis',
+            reason: 'Cannot continue safely without additional user input',
+          },
+        ],
+        escalations: [
+          {
+            escalation_id: 'high-risk-action',
+            trigger: 'Execution requires destructive, irreversible, legal, or financial actions',
+            approval_ref: 'guardrails.approval_rules.approve_high_risk',
+          },
+        ],
+      },
+    },
+    {
+      playbook: {
+        schema_version: 'playbook.v1',
+        id: 'research-then-act',
+        name: 'Research Then Act',
+        description: 'Gather context, choose an execution path, and deliver an evidence-backed recommendation or action plan.',
+        triggers: [{ type: 'manual' }],
+        inputs: [
+          { name: 'question', type: 'string', required: true, description: 'Decision or task question to resolve' },
+          { name: 'sources', type: 'string', required: false, description: 'Optional initial sources to bootstrap synthesis' },
+          { name: 'decision_deadline', type: 'string', required: false, description: 'Optional timing constraint for recommendation' },
+        ],
+        steps: [
+          {
+            step_id: 'capture-context',
+            type: 'tool',
+            tool_ref: 'skill:context-synthesis',
+            params_template: {
+              question: '{{question}}',
+              sources: '{{sources}}',
+            },
+            outputs: ['brief', 'confidence_map', 'open_questions'],
+          },
+          {
+            step_id: 'select-path',
+            type: 'think',
+            params_template: {
+              brief: '{{brief}}',
+              confidence_map: '{{confidence_map}}',
+              deadline: '{{decision_deadline}}',
+              instruction: 'Select a recommended path with two alternatives and explicit tradeoffs.',
+            },
+            outputs: ['recommended_path'],
+          },
+          {
+            step_id: 'execute-path',
+            type: 'tool',
+            tool_ref: 'skill:task-orchestration',
+            params_template: {
+              goal: '{{question}}',
+              context_snapshot: '{{brief}}',
+              constraints: '{{decision_deadline}}',
+            },
+            outputs: ['path_result'],
+          },
+          {
+            step_id: 'deliver',
+            type: 'write',
+            params_template: {
+              content: '{{path_result}}',
+              include: ['recommended_path', 'confidence_map', 'open_questions'],
+            },
+            outputs: ['delivery_packet'],
+          },
+        ],
+        checks: [
+          {
+            check_id: 'traceability',
+            type: 'facts',
+            condition: 'Recommendation and actions are traceable to synthesized context and confidence markers',
+          },
+          {
+            check_id: 'format-quality',
+            type: 'format',
+            condition: 'Delivery packet clearly separates facts, assumptions, risks, and next actions',
+          },
+        ],
+        stop_conditions: [
+          {
+            condition: 'No viable path can be recommended from available evidence',
+            reason: 'Insufficient confidence to proceed responsibly',
+          },
+        ],
+        escalations: [
+          {
+            escalation_id: 'policy-or-risk-blocker',
+            trigger: 'Recommended path conflicts with trust/guardrail policy or crosses high-risk thresholds',
+            approval_ref: 'guardrails.approval_rules.approve_high_risk',
           },
         ],
       },

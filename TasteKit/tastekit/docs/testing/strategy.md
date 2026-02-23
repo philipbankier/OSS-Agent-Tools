@@ -13,12 +13,14 @@
    - Export behavior and artifact compatibility for all adapters.
 3. CLI integration tests (`packages/cli/tests/integration`)
    - Process-level command execution with temporary workspaces and deterministic fixtures.
+   - Includes first-class `general-agent` init coverage.
 4. Contract conformance tests (`scripts/validation/contract-conformance.sh`)
    - Canonical contract fixtures and strict schema checks.
    - Path canonicalization assertions for trust/bindings/session contracts.
    - Runtime-tolerant trace parsing compatibility checks.
 5. Deterministic e2e replay (`scripts/validation/pr-gate.sh`)
    - Full workspace compile/export/replay checks against committed fixtures.
+   - Verifies compatibility with hidden `.tastekit` fixture workspaces checked into git.
 6. Live pre-release smoke (`scripts/validation/pre-release-live-ollama.sh`)
    - Real onboarding and compile with Ollama, evidence logged for release readiness.
 

@@ -9,8 +9,10 @@ import { ResearchAgentDomain } from './research-agent/domain.js';
 import { SalesAgentDomain } from './sales-agent/domain.js';
 import { SupportAgentDomain } from './support-agent/domain.js';
 import { DevelopmentAgentDomain } from './development-agent/domain.js';
+import { GeneralAgentDomain } from './general-agent/domain.js';
 import { ContentAgentRubric } from './content-agent/rubric.js';
 import { DevelopmentAgentRubric } from './development-agent/rubric.js';
+import { GeneralAgentRubric } from './general-agent/rubric.js';
 import { ResearchAgentRubric } from './research-agent/rubric.js';
 import { SalesAgentRubric } from './sales-agent/rubric.js';
 import { SupportAgentRubric } from './support-agent/rubric.js';
@@ -22,12 +24,14 @@ export const AVAILABLE_DOMAINS = [
   SalesAgentDomain,
   SupportAgentDomain,
   DevelopmentAgentDomain,
+  GeneralAgentDomain,
 ] as const;
 
 /** Map of domain_id → rubric for domains that have rubrics */
 const DOMAIN_RUBRICS: Record<string, DomainRubric> = {
   'content-agent': ContentAgentRubric,
   'development-agent': DevelopmentAgentRubric,
+  'general-agent': GeneralAgentRubric,
   'research-agent': ResearchAgentRubric,
   'sales-agent': SalesAgentRubric,
   'support-agent': SupportAgentRubric,
@@ -57,3 +61,4 @@ export * from './research-agent/index.js';
 export * from './sales-agent/index.js';
 export * from './support-agent/index.js';
 export * from './development-agent/index.js';
+export * from './general-agent/index.js';

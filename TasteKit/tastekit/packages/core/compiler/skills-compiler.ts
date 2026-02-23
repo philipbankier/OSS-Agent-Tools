@@ -16,6 +16,13 @@ interface DomainSkill {
   risk_level: 'low' | 'med' | 'high';
   required_tools: string[];
   compatible_runtimes?: string[];
+  playbook_ref?: string;
+  prerequisites?: string[];
+  feeds_into?: string[];
+  alternatives?: string[];
+  pipeline_phase?: string;
+  context_model?: 'inherit' | 'fork';
+  model_hint?: string;
   skill_md_content: string;
 }
 
@@ -50,6 +57,13 @@ export async function compileSkills(options: SkillsCompilationOptions): Promise<
       risk_level: skill.risk_level,
       required_tools: skill.required_tools,
       compatible_runtimes: skill.compatible_runtimes ?? ['claude-code', 'openclaw'],
+      playbook_ref: skill.playbook_ref,
+      prerequisites: skill.prerequisites,
+      feeds_into: skill.feeds_into,
+      alternatives: skill.alternatives,
+      pipeline_phase: skill.pipeline_phase,
+      context_model: skill.context_model,
+      model_hint: skill.model_hint,
     };
 
     allSkills.push(metadata);
@@ -112,6 +126,10 @@ async function resolveDomainSkills(domainId?: string): Promise<DomainSkill[]> {
     case 'development-agent': {
       const { DevelopmentAgentSkills } = await import('../domains/development-agent/skills/index.js');
       return DevelopmentAgentSkills as DomainSkill[];
+    }
+    case 'general-agent': {
+      const { GeneralAgentSkills } = await import('../domains/general-agent/skills/index.js');
+      return GeneralAgentSkills as DomainSkill[];
     }
     default:
       return [];

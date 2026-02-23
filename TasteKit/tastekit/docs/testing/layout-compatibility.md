@@ -21,7 +21,9 @@ TasteKit supports:
 4. migration helper preserves existing files and is non-destructive.
 5. CLI commands using traces/session/artifacts behave identically across layouts.
 6. Trust and bindings writes are canonicalized to root JSON paths.
+7. `general-agent` compiles dedicated skills/playbooks in both fixture layouts.
 
 ## Fixture Sets
 - `fixtures/testing/e2e/v1/` for flat workspace replay.
 - `fixtures/testing/e2e/v2/` for three-space replay.
+- `fixtures/contracts/v1/` for strict contract conformance fixtures.

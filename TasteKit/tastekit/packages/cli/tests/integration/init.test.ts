@@ -46,4 +46,27 @@ describe('tastekit init', () => {
       cleanupWorkspace(root);
     }
   });
+
+  it('supports general-agent as a first-class domain', async () => {
+    const root = makeTempWorkspace('init-general-agent');
+
+    try {
+      const result = await runCli(['init', '--domain', 'general-agent', '--depth', 'guided'], {
+        cwd: root,
+        input: '\n',
+        env: {
+          OLLAMA_HOST: 'http://127.0.0.1:11434',
+        },
+      });
+
+      expect(result.code).toBe(0);
+      expect(existsSync(join(root, '.tastekit', 'tastekit.yaml'))).toBe(true);
+
+      const config = readFileSync(join(root, '.tastekit', 'tastekit.yaml'), 'utf-8');
+      expect(config).toContain('domain_id: general-agent');
+      expect(config).toContain('depth: guided');
+    } finally {
+      cleanupWorkspace(root);
+    }
+  });
 });
