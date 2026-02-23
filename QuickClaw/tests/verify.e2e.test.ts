@@ -107,6 +107,46 @@ describe('quickclaw verify sandboxed e2e (mocked binaries)', () => {
     process.exitCode = 0;
   });
 
+  it('reports healthy status when hooks/cron/runtime checks succeed', async () => {
+    shellMocks.runShell.mockResolvedValueOnce({
+      code: 0,
+      stdout: 'healthy',
+      stderr: '',
+      command: 'openclaw health',
+    });
+    hooksMocks.checkHooks.mockResolvedValueOnce({
+      ok: true,
+      stdout: "Hook 'session-memory' is enabled",
+      stderr: '',
+    });
+    cronMocks.verifyCron.mockResolvedValueOnce({
+      ok: true,
+      stdout: 'quickclaw-nightly-extraction:ok',
+      stderr: '',
+    });
+    sentryMocks.verifySentryEndpoint.mockResolvedValueOnce({
+      ok: true,
+      details: 'Sentry endpoint reachable',
+    });
+
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    await runVerify(['--config', configPath, '--workspace', workspace, '--json']);
+    const output = JSON.parse(String(logSpy.mock.calls.at(-1)?.[0] ?? '{}')) as {
+      ok: boolean;
+      checks: Array<{ name: string; ok: boolean }>;
+      verificationReport: string;
+    };
+    logSpy.mockRestore();
+
+    expect(output.ok).toBe(true);
+    expect(existsSync(output.verificationReport)).toBe(true);
+    expect(output.checks.some((check) => check.name === 'openclaw_health' && check.ok)).toBe(true);
+    expect(output.checks.some((check) => check.name === 'openclaw_hooks_check' && check.ok)).toBe(true);
+    expect(output.checks.some((check) => check.name === 'openclaw_cron_list' && check.ok)).toBe(true);
+    expect(output.checks.some((check) => check.name === 'sentry_webhook_route_test' && check.ok)).toBe(true);
+    expect(process.exitCode ?? 0).toBe(0);
+  });
+
   it('reports actionable hook/cron/runtime failures in --json output and report file', async () => {
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     await runVerify(['--config', configPath, '--workspace', workspace, '--json']);

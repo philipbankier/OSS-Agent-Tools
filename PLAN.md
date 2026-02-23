@@ -1,6 +1,6 @@
 # Project Roadmap & Status
 
-Last updated: 2026-02-19
+Last updated: 2026-02-23
 
 This roadmap has three parallel tracks:
 - **Track A**: TasteKit + AutoClaw (taste compiler → agent runtime)
@@ -48,8 +48,8 @@ Goal: Deterministic verification and tests for required behavior.
 
 - [x] Implement `quickclaw verify` with health/hooks/cron/route checks
 - [x] Add unit tests for config, preflight helpers, templates, parser logic, cron schedule conversion, and sentry transform
-- [ ] Add mocked integration tests for full `quickclaw create` execution path
-- [ ] Add sandboxed end-to-end tests for fresh + existing workspace scenarios
+- [x] Add mocked integration tests for full `quickclaw create` execution path
+- [x] Add sandboxed end-to-end tests for fresh + existing workspace scenarios
 
 ---
 
