@@ -2,6 +2,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { basename, dirname, join, sep } from 'node:path';
 import { resolveTraceDirectory } from '../contracts/paths';
 import { parseTraceEvent, type TraceEvent } from '../contracts/trace';
+import { streamEventBus } from '../runtime/events';
 import { deriveStatus } from '../status/derive';
 import type { SQLiteStore } from '../storage/sqlite';
 import { parseTraceLines } from './parser';
@@ -145,6 +146,32 @@ export class IngestionService {
 
     this.options.store.upsertAgent(snapshot);
     this.options.store.appendEvents(toStoredEvents(agentId, parsed.events));
+
+    streamEventBus.publish('agent_updated', { agent: snapshot });
+    for (const event of parsed.events) {
+      streamEventBus.publish('new_event', {
+        agentId,
+        event: {
+          runId: event.run_id,
+          eventType: event.event_type,
+          timestamp: event.timestamp,
+          summary: summarizeEvent(event),
+        },
+      });
+    }
+
+    if (snapshot.status === 'blocked' || snapshot.status === 'error') {
+      streamEventBus.publish('alert', {
+        id: `${agentId}-${Date.now()}-${snapshot.status}`,
+        level: snapshot.status === 'error' ? 'error' : 'warning',
+        message:
+          snapshot.status === 'error'
+            ? `Agent ${snapshot.displayName} reported an error.`
+            : `Agent ${snapshot.displayName} is waiting on approval.`,
+        agentId,
+        createdAt: new Date().toISOString(),
+      });
+    }
   }
 
   listAgents(): AgentSnapshot[] {
