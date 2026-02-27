@@ -1,0 +1,45 @@
+name: autoManage PR Gate
+
+on:
+  pull_request:
+    paths:
+      - 'autoManage/**'
+      - '.github/workflows/automanage-pr.yml'
+
+jobs:
+  deterministic-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.29.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: |
+            TasteKit/tastekit/pnpm-lock.yaml
+            autoManage/pnpm-lock.yaml
+
+      - name: Install TasteKit dependencies
+        run: pnpm --dir TasteKit/tastekit install
+
+      - name: Prebuild TasteKit core
+        run: pnpm --dir TasteKit/tastekit --filter @tastekit/core build
+
+      - name: Install autoManage dependencies
+        run: pnpm --dir autoManage install
+
+      - name: Build autoManage
+        run: pnpm --dir autoManage build
+
+      - name: Test autoManage
+        run: pnpm --dir autoManage test
