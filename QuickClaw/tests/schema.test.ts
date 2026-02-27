@@ -8,6 +8,12 @@ describe('config schema', () => {
     expect(parsed.version).toBe('quickclaw.v1');
     expect(parsed.safety.profile).toBe('balanced');
     expect(parsed.automation.autoInstallMissingCli).toBe(false);
+    expect(parsed.automation.allowGlobalConfigWrites).toBe(false);
+    expect(parsed.memory.decay.hotDays).toBe(7);
+    expect(parsed.memory.decay.warmDays).toBe(30);
+    expect(parsed.safety.trustLadderLevel).toBe('draft-approve');
+    expect(parsed.sentry.mode).toBe('slack-first');
+    expect(parsed.openclaw.advanced.multiAgentScaffold).toBe(true);
   });
 
   it('rejects invalid profile', () => {

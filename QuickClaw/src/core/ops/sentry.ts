@@ -1,14 +1,17 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import type { QuickClawConfigV1 } from '../../config/schema.js';
 
 export interface SentrySetupResult {
-  configPath: string;
+  configPath?: string;
+  patchPath?: string;
   transformPath: string;
   sentryApiValidated: boolean;
   alertRuleConfigured: boolean;
   webhookSmokeTest: boolean;
+  globalConfigWriteBlocked: boolean;
+  policyWarnings: string[];
   details: string[];
 }
 
@@ -39,7 +42,10 @@ function saveOpenClawConfig(configPath: string, config: OpenClawConfig): void {
   writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8');
 }
 
-export function transformSentryPayload(payload: Record<string, unknown>): { message: string; name: string; wakeMode: 'now'; deliver: true; channel: 'slack'; to: string } {
+export function transformSentryPayload(
+  payload: Record<string, unknown>,
+  mode: QuickClawConfigV1['sentry']['mode'] = 'slack-first',
+): { message: string; name: string; wakeMode: 'now'; deliver: true; channel: 'slack'; to: string } {
   const issue = (payload.data as Record<string, unknown> | undefined) ?? {};
   const title = typeof issue.title === 'string' ? issue.title : 'Sentry alert';
   const culprit = typeof issue.culprit === 'string' ? issue.culprit : 'unknown culprit';
@@ -57,13 +63,14 @@ export function transformSentryPayload(payload: Record<string, unknown>): { mess
       `Issue ID: ${id}`,
       `Title: ${title}`,
       `Culprit: ${culprit}`,
+      `Mode: ${mode}`,
       'Apply triage policy: auto-fix low-risk code defects; escalate architecture/security/uncertain cases.',
       'If auto-fixing: create isolated worktree, write failing tests first, implement fix, run tests+linter, open PR, notify human.',
     ].join('\n'),
   };
 }
 
-function sentryTransformModuleSource(defaultChannel: string): string {
+function sentryTransformModuleSource(defaultChannel: string, mode: QuickClawConfigV1['sentry']['mode']): string {
   return `
 function normalize(payload) {
   const data = (payload && payload.data) || {};
@@ -83,6 +90,7 @@ function normalize(payload) {
       'Issue ID: ' + issueId,
       'Title: ' + title,
       'Culprit: ' + culprit,
+      'Mode: ${mode}',
       'Apply triage policy: auto-fix low-risk code defects; escalate architecture/security/uncertain cases.',
       'If auto-fixing: create isolated worktree, write failing tests first, implement fix, run tests+linter, open PR, notify human.'
     ].join('\\n')
@@ -92,6 +100,75 @@ function normalize(payload) {
 module.exports = normalize;
 module.exports.default = normalize;
 `;
+}
+
+function resolveIssueScriptSource(): string {
+  return `#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ $# -lt 1 ]]; then
+  echo "Usage: $0 <issue_id> [status]"
+  exit 1
+fi
+
+if [[ -z "${'$'}{SENTRY_AUTH_TOKEN:-}" ]]; then
+  echo "SENTRY_AUTH_TOKEN is required"
+  exit 1
+fi
+
+ISSUE_ID="$1"
+STATUS="${'$'}{2:-resolved}"
+
+curl -sS -X PUT "https://sentry.io/api/0/issues/${'$'}ISSUE_ID/" \
+  -H "Authorization: Bearer ${'$'}SENTRY_AUTH_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\\"status\\": \\"${'$'}STATUS\\"}"
+`;
+}
+
+function createConfigPatch(
+  config: QuickClawConfigV1,
+  workspace: string,
+  slackAppToken?: string,
+  slackBotToken?: string,
+  hookToken?: string,
+): OpenClawConfig {
+  const slackChannel = config.sentry.slackChannelId.startsWith('channel:')
+    ? config.sentry.slackChannelId
+    : `channel:${config.sentry.slackChannelId}`;
+  const channelId = slackChannel.replace(/^channel:/, '');
+
+  return {
+    channels: {
+      slack: {
+        enabled: true,
+        mode: 'socket',
+        appToken: slackAppToken,
+        botToken: slackBotToken,
+        groupPolicy: 'allowlist',
+        channels: {
+          [channelId]: {
+            enabled: true,
+            requireMention: false,
+          },
+        },
+      },
+    },
+    hooks: {
+      enabled: true,
+      token: hookToken,
+      path: '/hooks',
+      transformsDir: path.join(workspace, 'ops', 'hooks'),
+      mappings: [
+        {
+          id: 'sentry',
+          match: { path: config.sentry.webhookPath.replace(/^\/+/, '') },
+          transform: { module: 'sentry-hook/hook-transform.js' },
+          action: 'agent',
+        },
+      ],
+    },
+  };
 }
 
 async function sentryApiRequest<T>(token: string, url: string, init?: RequestInit): Promise<T> {
@@ -181,69 +258,66 @@ async function smokeTestWebhook(config: QuickClawConfigV1, hookToken: string): P
 
 export async function setupSentryPipeline(workspace: string, config: QuickClawConfigV1): Promise<SentrySetupResult> {
   const details: string[] = [];
+  const policyWarnings: string[] = [];
   const configPath = resolveOpenClawConfigPath();
+  const patchPath = path.join(workspace, '.quickclaw', 'openclaw.config.patch.json');
   const transformPath = path.join(workspace, 'ops', 'hooks', 'sentry-hook', 'hook-transform.js');
+  const resolveIssuePath = path.join(workspace, 'ops', 'sentry', 'resolve-sentry-issue.sh');
 
   const hookTokenEnv = config.credentials.refs.openclaw_hook_token ?? 'OPENCLAW_HOOKS_TOKEN';
   const hookToken = process.env[hookTokenEnv];
   const slackBotToken = process.env[config.credentials.refs.slack_bot_token ?? 'SLACK_BOT_TOKEN'];
   const slackAppToken = process.env[config.credentials.refs.slack_app_token ?? 'SLACK_APP_TOKEN'];
   const sentryToken = process.env[config.sentry.authTokenEnv];
-
-  const ocConfig = loadOpenClawConfig(configPath);
-
   const slackChannel = config.sentry.slackChannelId.startsWith('channel:')
     ? config.sentry.slackChannelId
     : `channel:${config.sentry.slackChannelId}`;
 
-  const channelId = slackChannel.replace(/^channel:/, '');
+  const patch = createConfigPatch(config, workspace, slackAppToken, slackBotToken, hookToken);
+  let globalConfigWriteBlocked = false;
+  if (config.automation.allowGlobalConfigWrites) {
+    const ocConfig = loadOpenClawConfig(configPath);
+    const patchChannels = (patch.channels ?? {}) as Record<string, unknown>;
+    const patchHooks = (patch.hooks ?? {}) as Record<string, unknown>;
+    const existingHooks = (ocConfig.hooks ?? {}) as Record<string, unknown>;
+    const existingMappings = Array.isArray(existingHooks.mappings) ? [...(existingHooks.mappings as unknown[])] : [];
+    const filteredMappings = existingMappings.filter((item) => {
+      if (!item || typeof item !== 'object') return true;
+      return (item as { id?: string }).id !== 'sentry';
+    });
+    if (Array.isArray(patchHooks.mappings)) {
+      filteredMappings.push(...patchHooks.mappings);
+    }
 
-  ocConfig.channels = {
-    ...(ocConfig.channels ?? {}),
-    slack: {
-      enabled: true,
-      mode: 'socket',
-      appToken: slackAppToken,
-      botToken: slackBotToken,
-      groupPolicy: 'allowlist',
-      channels: {
-        [channelId]: {
-          enabled: true,
-          requireMention: false,
-        },
-      },
-    },
-  };
+    ocConfig.channels = {
+      ...(ocConfig.channels ?? {}),
+      ...patchChannels,
+    };
+    ocConfig.hooks = {
+      ...existingHooks,
+      ...patchHooks,
+      mappings: filteredMappings,
+    };
 
-  const existingHooks = (ocConfig.hooks ?? {}) as Record<string, unknown>;
-  const mappings = Array.isArray(existingHooks.mappings) ? [...(existingHooks.mappings as unknown[])] : [];
-  const filtered = mappings.filter((item) => {
-    if (!item || typeof item !== 'object') return true;
-    return (item as { id?: string }).id !== 'sentry';
-  });
-
-  filtered.push({
-    id: 'sentry',
-    match: { path: config.sentry.webhookPath.replace(/^\/+/, '') },
-    transform: { module: 'sentry-hook/hook-transform.js' },
-    action: 'agent',
-  });
-
-  ocConfig.hooks = {
-    ...existingHooks,
-    enabled: true,
-    token: hookToken,
-    path: '/hooks',
-    transformsDir: path.join(workspace, 'ops', 'hooks'),
-    mappings: filtered,
-  };
-
-  saveOpenClawConfig(configPath, ocConfig);
-  details.push(`Updated OpenClaw config at ${configPath}`);
+    saveOpenClawConfig(configPath, ocConfig);
+    details.push(`Updated OpenClaw config at ${configPath}`);
+  } else {
+    globalConfigWriteBlocked = true;
+    mkdirSync(path.dirname(patchPath), { recursive: true });
+    writeFileSync(patchPath, JSON.stringify(patch, null, 2), 'utf-8');
+    const warning = `Global OpenClaw config writes are disabled by policy. Apply ${patchPath} on target host or set automation.allowGlobalConfigWrites=true.`;
+    policyWarnings.push(warning);
+    details.push(warning);
+  }
 
   mkdirSync(path.dirname(transformPath), { recursive: true });
-  writeFileSync(transformPath, sentryTransformModuleSource(slackChannel), 'utf-8');
+  writeFileSync(transformPath, sentryTransformModuleSource(slackChannel, config.sentry.mode), 'utf-8');
   details.push(`Wrote transform module ${transformPath}`);
+
+  mkdirSync(path.dirname(resolveIssuePath), { recursive: true });
+  writeFileSync(resolveIssuePath, resolveIssueScriptSource(), 'utf-8');
+  chmodSync(resolveIssuePath, 0o755);
+  details.push(`Wrote issue resolution helper ${resolveIssuePath}`);
 
   let sentryApiValidated = false;
   let alertRuleConfigured = false;
@@ -274,7 +348,9 @@ export async function setupSentryPipeline(workspace: string, config: QuickClawCo
   }
 
   let webhookSmokeTest = false;
-  if (hookToken) {
+  if (globalConfigWriteBlocked) {
+    details.push('Webhook smoke test skipped because global OpenClaw config writes are blocked by policy');
+  } else if (hookToken) {
     try {
       webhookSmokeTest = await smokeTestWebhook(config, hookToken);
       details.push(`Webhook smoke test ${webhookSmokeTest ? 'passed' : 'failed'}`);
@@ -286,11 +362,14 @@ export async function setupSentryPipeline(workspace: string, config: QuickClawCo
   }
 
   return {
-    configPath,
+    configPath: config.automation.allowGlobalConfigWrites ? configPath : undefined,
+    patchPath: config.automation.allowGlobalConfigWrites ? undefined : patchPath,
     transformPath,
     sentryApiValidated,
     alertRuleConfigured,
     webhookSmokeTest,
+    globalConfigWriteBlocked,
+    policyWarnings,
     details,
   };
 }

@@ -123,7 +123,7 @@ function requiredSecrets(config: QuickClawConfigV1): string[] {
   if (authChoice.includes('anthropic')) {
     required.push(config.credentials.refs.anthropic_api_key ?? 'ANTHROPIC_API_KEY');
   }
-  if (authChoice.includes('openai') || authChoice === 'apiKey') {
+  if (authChoice.includes('openai')) {
     required.push(config.credentials.refs.openai_api_key ?? 'OPENAI_API_KEY');
   }
 
@@ -168,6 +168,21 @@ export async function runPreflight(config: QuickClawConfigV1): Promise<Preflight
       name: `secret_${envName}`,
       ok: Boolean(value),
       details: value ? `${envName} available` : `${envName} missing`,
+    });
+  }
+
+  if (config.openclaw.authChoice === 'apiKey') {
+    const anthropicEnv = config.credentials.refs.anthropic_api_key ?? 'ANTHROPIC_API_KEY';
+    const openaiEnv = config.credentials.refs.openai_api_key ?? 'OPENAI_API_KEY';
+    const hasAnthropic = Boolean(process.env[anthropicEnv]);
+    const hasOpenAI = Boolean(process.env[openaiEnv]);
+    checks.push({
+      name: 'secret_apiKey_provider',
+      ok: hasAnthropic || hasOpenAI,
+      details:
+        hasAnthropic || hasOpenAI
+          ? `Provider API key available (${[hasAnthropic ? anthropicEnv : '', hasOpenAI ? openaiEnv : ''].filter(Boolean).join(', ')})`
+          : `At least one provider API key is required for authChoice=apiKey. Set ${anthropicEnv} or ${openaiEnv}`,
     });
   }
 

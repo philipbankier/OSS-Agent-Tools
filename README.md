@@ -16,3 +16,7 @@ Commands:
 - `quickclaw create`
 - `quickclaw verify`
 - `quickclaw export-config`
+
+Claude Code runbook:
+
+- `/Users/philipbankier/Development/OSS/Taste OSS/OSS-Agent-Tools/QuickClaw/HANDOFF_CLAUDE_CODE.md`
