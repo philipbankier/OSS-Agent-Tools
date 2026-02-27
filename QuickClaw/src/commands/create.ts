@@ -42,6 +42,17 @@ interface CreateOptions {
   enginePolicy?: EnginePolicy;
 }
 
+const PREVIEW_MUTATIONS_SKIPPED = [
+  'auto_install_cli',
+  'onboard',
+  'workspace_materialization',
+  'coding_ops',
+  'hooks',
+  'cron',
+  'sentry_pipeline',
+  'tastekit_bridge',
+] as const;
+
 function resolveConfig(options: CreateOptions): Promise<QuickClawConfigV1> {
   if (options.config) {
     return Promise.resolve(loadConfigFile(options.config));
@@ -67,16 +78,10 @@ function applyWorkspaceOverride(config: QuickClawConfigV1, workspace?: string): 
 function writeWorkspaceDocs(workspace: string, docs: GeneratedDocuments): string[] {
   const files: string[] = [];
 
-  const workspaceFiles: Array<[string, string]> = [
-    ['AGENTS.md', docs['AGENTS.md']],
-    ['SOUL.md', docs['SOUL.md']],
-    ['IDENTITY.md', docs['IDENTITY.md']],
-    ['USER.md', docs['USER.md']],
-    ['MEMORY.md', docs['MEMORY.md']],
-    ['HEARTBEAT.md', docs['HEARTBEAT.md']],
-    [path.join('ops', 'coding-policy.md'), docs['ops/coding-policy.md']],
-    [path.join('memory', `${new Date().toISOString().slice(0, 10)}.md`), docs['memory-seed']],
-  ];
+  const workspaceFiles: Array<[string, string]> = Object.entries(docs)
+    .filter(([name]) => name !== 'memory-seed')
+    .map(([name, content]) => [name, content]);
+  workspaceFiles.push([path.join('memory', `${new Date().toISOString().slice(0, 10)}.md`), docs['memory-seed']]);
 
   for (const [relPath, content] of workspaceFiles) {
     const target = path.join(workspace, relPath);
@@ -120,21 +125,6 @@ export function createCommand(): Command {
       mkdirSync(workspace, { recursive: true });
 
       let preflight = await runPreflight(config);
-      let autoInstallSummary:
-        | {
-            attempted: string[];
-            installed: string[];
-            failed: Array<{ binary: string; installCommand?: string; error: string }>;
-          }
-        | undefined;
-
-      if (config.automation.autoInstallMissingCli) {
-        const missing = missingBinaries(preflight);
-        if (missing.length > 0) {
-          autoInstallSummary = await autoInstallMissingBinaries(preflight);
-          preflight = await runPreflight(config);
-        }
-      }
 
       const planReport: PlanReport = {
         version: 'quickclaw-report.v1',
@@ -178,8 +168,8 @@ export function createCommand(): Command {
                 workspace,
                 planReport: planPath,
                 checks: preflight.checks,
-                autoInstallSummary,
                 generatedArtifacts: artifactPreview,
+                hostMutationsSkipped: [...PREVIEW_MUTATIONS_SKIPPED],
               },
               null,
               2,
@@ -190,20 +180,32 @@ export function createCommand(): Command {
           for (const check of preflight.checks) {
             console.log(`- [${check.ok ? 'ok' : 'fail'}] ${check.name} ${check.details ?? ''}`);
           }
-          if (autoInstallSummary) {
-            console.log(
-              `- auto-install attempted=${autoInstallSummary.attempted.join(',') || 'none'} installed=${autoInstallSummary.installed.join(',') || 'none'}`,
-            );
-            for (const failure of autoInstallSummary.failed) {
-              console.log(`- auto-install failed ${failure.binary}: ${failure.error}`);
-            }
-          }
           console.log('Generated artifacts preview:');
           for (const artifact of artifactPreview) {
             console.log(`- ${artifact.name} (${artifact.bytes} bytes)`);
           }
+          console.log('Host mutations skipped in preview:');
+          for (const mutation of PREVIEW_MUTATIONS_SKIPPED) {
+            console.log(`- ${mutation}`);
+          }
         }
         return;
+      }
+
+      let autoInstallSummary:
+        | {
+            attempted: string[];
+            installed: string[];
+            failed: Array<{ binary: string; installCommand?: string; error: string }>;
+          }
+        | undefined;
+
+      if (config.automation.autoInstallMissingCli) {
+        const missing = missingBinaries(preflight);
+        if (missing.length > 0) {
+          autoInstallSummary = await autoInstallMissingBinaries(preflight);
+          preflight = await runPreflight(config);
+        }
       }
 
       if (options.confirm) {
@@ -270,10 +272,28 @@ export function createCommand(): Command {
       });
 
       const sentryResult = await setupSentryPipeline(workspace, config);
+      const sentryFailures: string[] = [];
+      if (!sentryResult.sentryApiValidated) {
+        sentryFailures.push(`Sentry API validation failed. Check ${config.sentry.authTokenEnv}, org, and project.`);
+      }
+      if (!sentryResult.alertRuleConfigured) {
+        sentryFailures.push('Sentry alert rule was not configured. Verify Sentry permissions and Slack integration.');
+      }
+      if (!sentryResult.webhookSmokeTest) {
+        sentryFailures.push(
+          sentryResult.globalConfigWriteBlocked
+            ? 'Webhook smoke test skipped/failed because global OpenClaw config writes are blocked by policy.'
+            : `Webhook smoke test failed. Verify OPENCLAW_HOOKS_TOKEN and gateway route /hooks/${config.sentry.webhookPath.replace(/^\/+/, '')}.`,
+        );
+      }
+      const sentryOk =
+        sentryResult.sentryApiValidated &&
+        sentryResult.alertRuleConfigured &&
+        sentryResult.webhookSmokeTest;
       actions.push({
         id: 'sentry_pipeline',
-        ok: sentryResult.sentryApiValidated && sentryResult.alertRuleConfigured,
-        details: sentryResult.details.join(' | '),
+        ok: sentryOk,
+        details: [...sentryResult.details, ...sentryFailures].join(' | '),
       });
 
       const tastekitResult = await runTasteKitBridge(workspace);
@@ -288,6 +308,7 @@ export function createCommand(): Command {
       };
 
       const applyPath = writeApplyReport(workspace, applyReport);
+      const policyWarnings = [...sentryResult.policyWarnings];
 
       if (options.json) {
         console.log(
@@ -296,8 +317,10 @@ export function createCommand(): Command {
               workspace,
               planReport: planPath,
               applyReport: applyPath,
+              checks: preflight.checks,
               success: applyReport.success,
               actions,
+              policyWarnings,
             },
             null,
             2,
@@ -309,6 +332,12 @@ export function createCommand(): Command {
         console.log(`Apply report: ${applyPath}`);
         for (const action of actions) {
           console.log(`- [${action.ok ? 'ok' : 'fail'}] ${action.id} ${action.details ?? ''}`);
+        }
+        if (policyWarnings.length > 0) {
+          console.log('Policy warnings:');
+          for (const warning of policyWarnings) {
+            console.log(`- ${warning}`);
+          }
         }
       }
 

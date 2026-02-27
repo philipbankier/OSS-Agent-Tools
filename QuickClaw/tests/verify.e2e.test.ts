@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -69,6 +69,16 @@ describe('quickclaw verify sandboxed e2e (mocked binaries)', () => {
     });
     configPath = path.join(tempRoot, 'quickclaw.config.json');
     writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8');
+    mkdirSync(path.join(workspace, 'memory'), { recursive: true });
+    mkdirSync(path.join(workspace, 'ops', 'safety'), { recursive: true });
+    mkdirSync(path.join(workspace, 'ops', 'scripts'), { recursive: true });
+    mkdirSync(path.join(workspace, '.quickclaw'), { recursive: true });
+    writeFileSync(path.join(workspace, 'memory', 'README.md'), '# memory\n', 'utf-8');
+    writeFileSync(path.join(workspace, 'ops', 'safety', 'trust-ladder.md'), '# trust\n', 'utf-8');
+    writeFileSync(path.join(workspace, 'ops', 'safety', 'approval-queue.md'), '# queue\n', 'utf-8');
+    writeFileSync(path.join(workspace, 'ops', 'scripts', 'tmux-heartbeat.sh'), '#!/usr/bin/env bash\n', 'utf-8');
+    writeFileSync(path.join(workspace, 'ops', 'scripts', 'wake-coding-session.sh'), '#!/usr/bin/env bash\n', 'utf-8');
+    writeFileSync(path.join(workspace, '.quickclaw', 'openclaw.config.patch.json'), '{}\n', 'utf-8');
 
     preflightMocks.runPreflight.mockReset();
     shellMocks.runShell.mockReset();
@@ -121,7 +131,12 @@ describe('quickclaw verify sandboxed e2e (mocked binaries)', () => {
     });
     cronMocks.verifyCron.mockResolvedValueOnce({
       ok: true,
-      stdout: 'quickclaw-nightly-extraction:ok',
+      stdout: [
+        'quickclaw-nightly-extraction:ok',
+        'quickclaw-morning-priorities:ok',
+        'quickclaw-ops-monitor:ok',
+        'quickclaw-coding-heartbeat:ok',
+      ].join('\\n'),
       stderr: '',
     });
     sentryMocks.verifySentryEndpoint.mockResolvedValueOnce({
@@ -143,6 +158,7 @@ describe('quickclaw verify sandboxed e2e (mocked binaries)', () => {
     expect(output.checks.some((check) => check.name === 'openclaw_health' && check.ok)).toBe(true);
     expect(output.checks.some((check) => check.name === 'openclaw_hooks_check' && check.ok)).toBe(true);
     expect(output.checks.some((check) => check.name === 'openclaw_cron_list' && check.ok)).toBe(true);
+    expect(output.checks.some((check) => check.name === 'openclaw_cron_required_jobs' && check.ok)).toBe(true);
     expect(output.checks.some((check) => check.name === 'sentry_webhook_route_test' && check.ok)).toBe(true);
     expect(process.exitCode ?? 0).toBe(0);
   });

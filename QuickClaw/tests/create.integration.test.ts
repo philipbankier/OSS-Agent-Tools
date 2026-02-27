@@ -93,6 +93,11 @@ function docsFixture(tag: string): GeneratedDocuments {
     'HEARTBEAT.md': `# HEARTBEAT.md\n${tag}\n`,
     'memory-seed': `# Memory Seed\n${tag}\n`,
     'ops/coding-policy.md': `# Coding Policy\n${tag}\n`,
+    'memory/README.md': `# Memory Architecture\n${tag}\n`,
+    'ops/safety/trust-ladder.md': `# Trust Ladder\n${tag}\n`,
+    'ops/safety/approval-queue.md': `# Approval Queue\n${tag}\n`,
+    'ops/sentry/triage-policy.md': `# Sentry Triage\n${tag}\n`,
+    'ops/sentry/staging-vs-production.md': `# Sentry Environment\n${tag}\n`,
   };
 }
 
@@ -141,6 +146,8 @@ describe('quickclaw create integration (mocked preflight)', () => {
       sentryApiValidated: true,
       alertRuleConfigured: true,
       webhookSmokeTest: true,
+      globalConfigWriteBlocked: false,
+      policyWarnings: [],
       details: ['sentry ok'],
     });
     tastekitMocks.runTasteKitBridge.mockResolvedValue({
@@ -162,6 +169,9 @@ describe('quickclaw create integration (mocked preflight)', () => {
         workspace,
         timezone: 'America/New_York',
       },
+      automation: {
+        autoInstallMissingCli: true,
+      },
     });
     const configPath = path.join(tempRoot, 'quickclaw.config.json');
     writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8');
@@ -172,10 +182,18 @@ describe('quickclaw create integration (mocked preflight)', () => {
     });
     preflightMocks.missingBinaries.mockReturnValue([]);
 
-    await runCreate(['--config', configPath, '--preview']);
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    await runCreate(['--config', configPath, '--preview', '--json']);
+    const output = JSON.parse(String(logSpy.mock.calls.at(-1)?.[0] ?? '{}')) as {
+      mode: string;
+      hostMutationsSkipped: string[];
+    };
+    logSpy.mockRestore();
 
     expect(existsSync(path.join(workspace, '.quickclaw', 'plan-report.v1.json'))).toBe(true);
     expect(existsSync(path.join(workspace, 'AGENTS.md'))).toBe(false);
+    expect(output.mode).toBe('preview');
+    expect(output.hostMutationsSkipped).toContain('auto_install_cli');
     expect(preflightMocks.autoInstallMissingBinaries).not.toHaveBeenCalled();
   });
 
@@ -210,7 +228,7 @@ describe('quickclaw create integration (mocked preflight)', () => {
       failed: [],
     });
 
-    await runCreate(['--config', configPath, '--preview', '--json']);
+    await runCreate(['--config', configPath, '--json']);
 
     expect(preflightMocks.runPreflight).toHaveBeenCalledTimes(2);
     expect(preflightMocks.autoInstallMissingBinaries).toHaveBeenCalledTimes(1);
@@ -254,6 +272,84 @@ describe('quickclaw create integration (mocked preflight)', () => {
     expect(hooksMocks.setupHooks).toHaveBeenCalledWith('openclaw');
     expect(cronMocks.setupCronJobs).toHaveBeenCalledTimes(1);
     expect(tastekitMocks.runTasteKitBridge).toHaveBeenCalledWith(path.resolve(workspace));
+  });
+
+  it('marks sentry step failed when webhook smoke test is false', async () => {
+    const workspace = path.join(tempRoot, 'workspace');
+    const config = buildDefaultConfig({
+      project: {
+        agentName: 'Sentry Gate Agent',
+        workspace,
+        timezone: 'America/New_York',
+      },
+    });
+    const configPath = path.join(tempRoot, 'quickclaw.config.json');
+    writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8');
+
+    preflightMocks.runPreflight.mockResolvedValue({
+      openclawBinary: 'openclaw',
+      checks: [{ name: 'node_version', ok: true }],
+    });
+    sentryMocks.setupSentryPipeline.mockResolvedValueOnce({
+      configPath: '/tmp/openclaw.json',
+      transformPath: '/tmp/hook-transform.js',
+      sentryApiValidated: true,
+      alertRuleConfigured: true,
+      webhookSmokeTest: false,
+      globalConfigWriteBlocked: false,
+      policyWarnings: [],
+      details: ['webhook smoke test failed'],
+    });
+
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    await runCreate(['--config', configPath, '--json']);
+    const output = JSON.parse(String(logSpy.mock.calls.at(-1)?.[0] ?? '{}')) as {
+      success: boolean;
+      actions: Array<{ id: string; ok: boolean; details?: string }>;
+    };
+    logSpy.mockRestore();
+
+    expect(output.success).toBe(false);
+    expect(output.actions.some((action) => action.id === 'sentry_pipeline' && action.ok === false)).toBe(true);
+  });
+
+  it('includes policyWarnings when global writes are blocked by config policy', async () => {
+    const workspace = path.join(tempRoot, 'workspace');
+    const config = buildDefaultConfig({
+      project: {
+        agentName: 'Policy Warning Agent',
+        workspace,
+        timezone: 'America/New_York',
+      },
+    });
+    const configPath = path.join(tempRoot, 'quickclaw.config.json');
+    writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8');
+
+    preflightMocks.runPreflight.mockResolvedValue({
+      openclawBinary: 'openclaw',
+      checks: [{ name: 'node_version', ok: true }],
+    });
+    sentryMocks.setupSentryPipeline.mockResolvedValueOnce({
+      patchPath: path.join(workspace, '.quickclaw', 'openclaw.config.patch.json'),
+      transformPath: '/tmp/hook-transform.js',
+      sentryApiValidated: true,
+      alertRuleConfigured: true,
+      webhookSmokeTest: false,
+      globalConfigWriteBlocked: true,
+      policyWarnings: ['Global OpenClaw config writes are disabled by policy.'],
+      details: ['policy blocked'],
+    });
+
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    await runCreate(['--config', configPath, '--json']);
+    const output = JSON.parse(String(logSpy.mock.calls.at(-1)?.[0] ?? '{}')) as {
+      success: boolean;
+      policyWarnings: string[];
+    };
+    logSpy.mockRestore();
+
+    expect(output.success).toBe(false);
+    expect(output.policyWarnings).toContain('Global OpenClaw config writes are disabled by policy.');
   });
 
   it('fails hard with explicit diagnostics when required full-ops secrets are missing', async () => {

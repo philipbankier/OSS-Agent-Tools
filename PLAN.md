@@ -51,6 +51,21 @@ Goal: Deterministic verification and tests for required behavior.
 - [x] Add mocked integration tests for full `quickclaw create` execution path
 - [x] Add sandboxed end-to-end tests for fresh + existing workspace scenarios
 
+## Phase 5: Strict Remediation + PDF Gap Closure (IN PROGRESS)
+
+Goal: Close P0 safety/correctness findings and implement ranked PDF coverage gaps.
+
+- [x] P0: Strict preview immutability (`--preview` skips all mutating operations, including auto-install)
+- [x] P0: `apiKey` preflight parity (accept Anthropic or OpenAI provider key)
+- [x] P0: Global config write safety default (`automation.allowGlobalConfigWrites=false` + workspace patch artifact)
+- [x] P0: Sentry readiness gate requires API validation + alert rule + webhook smoke
+- [x] P1: Layered memory scaffold (`memory/README.md`, decay policy, nightly extraction script)
+- [x] P2: Safety trust ladder + approval queue docs (`ops/safety/*`)
+- [x] P3: Coding scale hardening scripts (tmux heartbeat restart policy, wake-session, PRD verification)
+- [x] P3: Coding monitor cron registration (`quickclaw-coding-heartbeat`)
+- [x] P4: Sentry full-cycle scaffolds (`ops/sentry/*`, resolve helper) and mode-aware transform metadata
+- [x] P4: Advanced OpenClaw optional scaffolds (`openclaw.advanced` docs generation)
+
 ---
 
 # Track A: TasteKit + AutoClaw

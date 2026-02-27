@@ -93,6 +93,11 @@ function docsFixture(tag: string): GeneratedDocuments {
     'HEARTBEAT.md': `# HEARTBEAT.md\n${tag}\n`,
     'memory-seed': `# Memory Seed\n${tag}\n`,
     'ops/coding-policy.md': `# Coding Policy\n${tag}\n`,
+    'memory/README.md': `# Memory Architecture\n${tag}\n`,
+    'ops/safety/trust-ladder.md': `# Trust Ladder\n${tag}\n`,
+    'ops/safety/approval-queue.md': `# Approval Queue\n${tag}\n`,
+    'ops/sentry/triage-policy.md': `# Sentry Triage\n${tag}\n`,
+    'ops/sentry/staging-vs-production.md': `# Sentry Environment\n${tag}\n`,
   };
 }
 
@@ -162,6 +167,8 @@ describe('quickclaw create sandboxed e2e (mocked binaries)', () => {
       sentryApiValidated: true,
       alertRuleConfigured: true,
       webhookSmokeTest: true,
+      globalConfigWriteBlocked: false,
+      policyWarnings: [],
       details: ['sentry ok'],
     });
     tastekitMocks.runTasteKitBridge.mockResolvedValue({
@@ -243,6 +250,8 @@ describe('quickclaw create sandboxed e2e (mocked binaries)', () => {
       sentryApiValidated: false,
       alertRuleConfigured: false,
       webhookSmokeTest: false,
+      globalConfigWriteBlocked: false,
+      policyWarnings: [],
       details: ['missing sentry token'],
     });
     tastekitMocks.runTasteKitBridge.mockResolvedValueOnce({

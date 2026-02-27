@@ -80,7 +80,12 @@ export async function setupCronJobs(
     {
       name: 'quickclaw-ops-monitor',
       cron: '*/30 * * * *',
-      message: 'Check coding sessions, webhook health, and recent errors. Report only actionable issues.',
+      message: `Check coding sessions, webhook health, and recent errors. Restart stalled coding sessions after ${config.codingOps.stalledCheckWindowMinutes}m with max ${config.codingOps.maxRestartsPerSession} restarts.`,
+    },
+    {
+      name: 'quickclaw-coding-heartbeat',
+      cron: '*/15 * * * *',
+      message: `Run ops/scripts/tmux-heartbeat.sh for active coding sessions. Window=${config.codingOps.stalledCheckWindowMinutes}m maxRestarts=${config.codingOps.maxRestartsPerSession}.`,
     },
   ];
 

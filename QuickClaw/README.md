@@ -1,6 +1,6 @@
 # QuickClaw
 
-QuickClaw is a full-auto OpenClaw setup/provisioning CLI.
+QuickClaw provisions and verifies OpenClaw workspaces with full ops scaffolding.
 
 ## Commands
 
@@ -8,7 +8,7 @@ QuickClaw is a full-auto OpenClaw setup/provisioning CLI.
 2. `quickclaw verify`
 3. `quickclaw export-config`
 
-## Install (local repo)
+## Install
 
 ```bash
 cd '/Users/philipbankier/Development/OSS/Taste OSS/OSS-Agent-Tools/QuickClaw'
@@ -24,9 +24,13 @@ quickclaw create --config quickclaw.config.yaml
 quickclaw verify --config quickclaw.config.yaml
 ```
 
+## Claude Code Handoff
+
+Use `/Users/philipbankier/Development/OSS/Taste OSS/OSS-Agent-Tools/QuickClaw/HANDOFF_CLAUDE_CODE.md` as the canonical copy/paste brief for bringing up a new target machine end-to-end.
+
 ## Config contract (`quickclaw.v1`)
 
-QuickClaw validates config via Zod and expects:
+Required top-level sections:
 
 - `version: "quickclaw.v1"`
 - `project`
@@ -39,10 +43,22 @@ QuickClaw validates config via Zod and expects:
 - `automation`
 - `credentials`
 
-Default automation behavior:
+Notable defaults:
 
 - `automation.autoInstallMissingCli: false`
-- Missing CLIs fail fast with exact install commands unless auto-install is explicitly enabled.
+- `automation.allowGlobalConfigWrites: false`
+- `safety.profile: balanced`
+- `safety.trustLadderLevel: draft-approve`
+- `sentry.mode: slack-first`
+- `memory.decay.hotDays: 7`
+- `memory.decay.warmDays: 30`
+
+Additive optional config blocks:
+
+- `memory.knowledgePaths: string[]`
+- `codingOps.stalledCheckWindowMinutes`
+- `codingOps.maxRestartsPerSession`
+- `openclaw.advanced.{multiAgentScaffold,tailscaleNotes,modelAliasTemplate}`
 
 ## `quickclaw create`
 
@@ -55,32 +71,29 @@ Flags:
 - `--json`
 - `--engine-policy <claude-plan-codex-exec|claude-only|codex-only>`
 
-Default mode is automatic apply. Use `--preview` for dry-run and `--confirm` to require confirmation before apply.
+Behavior:
 
-`quickclaw create` preflight behavior:
+- Default mode is automatic apply.
+- `--preview` is strictly non-mutating (no auto-install, onboard, hooks/cron/sentry apply, or workspace materialization).
+- Missing CLIs fail fast with install commands unless `automation.autoInstallMissingCli: true`.
+- Global OpenClaw config writes are blocked by default; QuickClaw emits `<workspace>/.quickclaw/openclaw.config.patch.json` instead.
 
-- By default, missing CLIs fail fast with explicit install commands.
-- Set `automation.autoInstallMissingCli: true` in config to auto-install missing CLIs before apply.
+JSON output keys:
 
-`--json` output keys:
-
-- `workspace`
-- `planReport`
-- `checks`
-- `generatedArtifacts` (preview mode)
-- `applyReport`, `success`, `actions` (apply mode)
+- Preview: `workspace`, `planReport`, `checks`, `generatedArtifacts`, `hostMutationsSkipped`
+- Apply: `workspace`, `planReport`, `applyReport`, `checks`, `success`, `actions`, `policyWarnings`
 
 ## Full-ops env checklist
 
-Set these before full apply:
+Set these for full apply:
 
-- `OPENAI_API_KEY` (or `ANTHROPIC_API_KEY` depending on `openclaw.authChoice`)
+- one of `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` (when `openclaw.authChoice=apiKey`)
 - `SENTRY_AUTH_TOKEN`
 - `OPENCLAW_HOOKS_TOKEN`
 - `SLACK_BOT_TOKEN`
 - `SLACK_APP_TOKEN`
 
-## Example workflows
+## Examples
 
 Preview only:
 
@@ -88,25 +101,19 @@ Preview only:
 quickclaw create --config quickclaw.config.yaml --preview --json
 ```
 
-Automatic apply:
+Apply:
 
 ```bash
 quickclaw create --config quickclaw.config.yaml --json
 ```
 
-Require manual confirmation before apply:
-
-```bash
-quickclaw create --config quickclaw.config.yaml --confirm
-```
-
-Verification:
+Verify:
 
 ```bash
 quickclaw verify --config quickclaw.config.yaml --json
 ```
 
-## Report outputs
+## Reports
 
 QuickClaw writes reports under `<workspace>/.quickclaw/`:
 
@@ -116,6 +123,5 @@ QuickClaw writes reports under `<workspace>/.quickclaw/`:
 
 ## Notes
 
-- OpenClaw is treated as canonical runtime target.
-- `clawdbot` is recognized as legacy CLI alias for compatibility.
-- Full-ops setup validates required secrets and fails if missing.
+- OpenClaw is canonical runtime target.
+- `clawdbot` is supported as compatibility alias.

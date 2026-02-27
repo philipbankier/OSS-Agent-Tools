@@ -16,5 +16,20 @@ describe('sentry transform', () => {
     expect(transformed.channel).toBe('slack');
     expect(transformed.message).toContain('NullPointerException');
     expect(transformed.message).toContain('Issue ID: 123');
+    expect(transformed.message).toContain('Mode: slack-first');
+  });
+
+  it('embeds webhook-direct mode when requested', () => {
+    const transformed = transformSentryPayload(
+      {
+        data: {
+          id: 'w1',
+          title: 'Webhook issue',
+        },
+      },
+      'webhook-direct',
+    );
+
+    expect(transformed.message).toContain('Mode: webhook-direct');
   });
 });

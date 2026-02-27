@@ -108,6 +108,24 @@ export async function runWizard(): Promise<QuickClawConfigV1> {
     },
     {
       type: 'input',
+      name: 'knowledgePaths',
+      message: 'Layer-3 knowledge paths (comma separated, optional)',
+      default: base.memory.knowledgePaths.join(', '),
+    },
+    {
+      type: 'number',
+      name: 'decayHotDays',
+      message: 'Memory decay hot window (days)',
+      default: base.memory.decay.hotDays,
+    },
+    {
+      type: 'number',
+      name: 'decayWarmDays',
+      message: 'Memory decay warm window (days)',
+      default: base.memory.decay.warmDays,
+    },
+    {
+      type: 'input',
       name: 'trustedCommandChannels',
       message: 'Trusted command channels (comma separated)',
       default: base.safety.trustedCommandChannels.join(', '),
@@ -125,6 +143,13 @@ export async function runWizard(): Promise<QuickClawConfigV1> {
       default: base.safety.autonomousAllowed.join(', '),
     },
     {
+      type: 'list',
+      name: 'trustLadderLevel',
+      message: 'Trust ladder level',
+      default: base.safety.trustLadderLevel,
+      choices: ['read-only', 'draft-approve', 'bounded-act'],
+    },
+    {
       type: 'input',
       name: 'worktreeRoot',
       message: 'Coding ops worktree root',
@@ -135,6 +160,18 @@ export async function runWizard(): Promise<QuickClawConfigV1> {
       name: 'tmuxSocket',
       message: 'Coding ops tmux socket path',
       default: base.codingOps.tmuxSocket,
+    },
+    {
+      type: 'number',
+      name: 'stalledCheckWindowMinutes',
+      message: 'Coding ops stalled check window (minutes)',
+      default: base.codingOps.stalledCheckWindowMinutes,
+    },
+    {
+      type: 'number',
+      name: 'maxRestartsPerSession',
+      message: 'Coding ops max restarts per session',
+      default: base.codingOps.maxRestartsPerSession,
     },
     {
       type: 'input',
@@ -167,10 +204,23 @@ export async function runWizard(): Promise<QuickClawConfigV1> {
       default: base.sentry.webhookPath,
     },
     {
+      type: 'list',
+      name: 'sentryMode',
+      message: 'Sentry ingestion mode',
+      default: base.sentry.mode,
+      choices: ['slack-first', 'webhook-direct'],
+    },
+    {
       type: 'confirm',
       name: 'autoInstallMissingCli',
       message: 'Auto-install missing CLIs during preflight?',
       default: base.automation.autoInstallMissingCli,
+    },
+    {
+      type: 'confirm',
+      name: 'allowGlobalConfigWrites',
+      message: 'Allow writes to global OpenClaw config on this host?',
+      default: base.automation.allowGlobalConfigWrites,
     },
   ]);
 
@@ -186,6 +236,7 @@ export async function runWizard(): Promise<QuickClawConfigV1> {
       authChoice: answers.authChoice,
       gatewayPort: Number(answers.gatewayPort),
       gatewayBind: answers.gatewayBind,
+      advanced: base.openclaw.advanced,
     },
     identity: {
       role: answers.role,
@@ -198,12 +249,18 @@ export async function runWizard(): Promise<QuickClawConfigV1> {
       longTermRules: parseList(answers.longTermRules),
       nightlyExtractionCron: answers.nightlyExtractionCron,
       dailyCheckinCron: answers.dailyCheckinCron,
+      knowledgePaths: parseList(answers.knowledgePaths),
+      decay: {
+        hotDays: Number(answers.decayHotDays),
+        warmDays: Number(answers.decayWarmDays),
+      },
     },
     safety: {
       profile: 'balanced',
       trustedCommandChannels: parseList(answers.trustedCommandChannels),
       approvalRequired: parseList(answers.approvalRequired),
       autonomousAllowed: parseList(answers.autonomousAllowed),
+      trustLadderLevel: answers.trustLadderLevel,
     },
     codingOps: {
       enabled: true,
@@ -211,6 +268,8 @@ export async function runWizard(): Promise<QuickClawConfigV1> {
       executionEngine: 'codex',
       worktreeRoot: answers.worktreeRoot,
       tmuxSocket: answers.tmuxSocket,
+      stalledCheckWindowMinutes: Number(answers.stalledCheckWindowMinutes),
+      maxRestartsPerSession: Number(answers.maxRestartsPerSession),
     },
     sentry: {
       enabled: true,
@@ -219,9 +278,11 @@ export async function runWizard(): Promise<QuickClawConfigV1> {
       authTokenEnv: answers.sentryAuthTokenEnv,
       slackChannelId: answers.slackChannelId,
       webhookPath: answers.webhookPath,
+      mode: answers.sentryMode,
     },
     automation: {
       autoInstallMissingCli: Boolean(answers.autoInstallMissingCli),
+      allowGlobalConfigWrites: Boolean(answers.allowGlobalConfigWrites),
     },
     credentials: base.credentials,
   };
