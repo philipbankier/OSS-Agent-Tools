@@ -1,8 +1,23 @@
 {
   "name": "@tastekit/cli",
-  "version": "0.5.0",
+  "version": "1.0.0",
   "description": "TasteKit CLI - command-line interface for taste compilation and management",
   "type": "module",
+  "license": "MIT",
+  "author": "TasteKit Contributors",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tastekit/tastekit.git",
+    "directory": "packages/cli"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "bin": {
     "tastekit": "./dist/cli.js"
   },
@@ -10,6 +25,7 @@
     "build": "tsc",
     "test": "pnpm run build && vitest run",
     "test:integration": "pnpm run build && vitest run tests/integration",
+    "lint": "eslint src/",
     "clean": "rm -rf dist"
   },
   "dependencies": {

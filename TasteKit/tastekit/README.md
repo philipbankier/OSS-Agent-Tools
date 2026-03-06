@@ -1,12 +1,22 @@
-# TasteKit v0.5
+# TasteKit
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue.svg)](https://www.typescriptlang.org/)
-[![pnpm](https://img.shields.io/badge/pnpm-8.0-orange.svg)](https://pnpm.io/)
+[![CI](https://github.com/tastekit/tastekit/actions/workflows/ci.yml/badge.svg)](https://github.com/tastekit/tastekit/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/@tastekit/cli.svg)](https://www.npmjs.com/package/@tastekit/cli)
 
 **Compile your taste into portable agent artifacts.**
 
 TasteKit is an open-source CLI tool and library that captures a user's preferences, principles, and personality through an LLM-driven interview, then compiles them into portable, versioned artifacts. These artifacts work across any agent runtime — Claude Code, OpenClaw, Manus, Autopilots, and more.
+
+## Why TasteKit?
+
+AI agents are powerful, but they don't know *you*. TasteKit solves this by creating a persistent, portable taste profile that any agent can load. Instead of repeating your preferences in every system prompt, compile them once and export everywhere:
+
+- **One interview, many runtimes** — Your taste works in Claude Code, OpenClaw, Manus, and Autopilots
+- **Drift detection** — Know when an agent's behavior drifts from your preferences over time (no other OSS tool does this)
+- **Trust & provenance** — Pin MCP server fingerprints to prevent silent tool changes
+- **Domain expertise** — Pre-built rubrics, skills, and playbooks for 6 agent domains
 
 ## Features
 
@@ -24,7 +34,17 @@ TasteKit is an open-source CLI tool and library that captures a user's preferenc
 ## Installation
 
 ```bash
-git clone <repo-url>
+# Install globally via npm
+npm install -g @tastekit/cli
+
+# Or use directly with npx
+npx @tastekit/cli init
+```
+
+### Development Setup
+
+```bash
+git clone https://github.com/tastekit/tastekit.git
 cd tastekit
 pnpm install
 pnpm build

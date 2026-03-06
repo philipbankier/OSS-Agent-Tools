@@ -12,7 +12,7 @@ export class AnthropicProvider implements LLMProvider {
 
   constructor(options: { apiKey: string; model?: string; baseUrl?: string }) {
     this.apiKey = options.apiKey;
-    this.model = options.model ?? 'claude-sonnet-4-20250514';
+    this.model = options.model ?? 'claude-sonnet-4-6';
     this.baseUrl = options.baseUrl ?? 'https://api.anthropic.com';
   }
 

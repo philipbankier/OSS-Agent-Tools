@@ -4,13 +4,20 @@ import { MCPClient, MCPTool } from './client.js';
 
 /**
  * MCP Binder
- * 
+ *
  * Binds MCP tools to the workspace and generates guardrails from MCP metadata.
  */
 
 export interface BindingOptions {
   interactive?: boolean;
   autoApproveRead?: boolean;
+  /**
+   * Custom tool selection callback. When provided and `interactive` is true,
+   * this function is called with discovered tools and should return the
+   * selected subset. This keeps @tastekit/core free of UI dependencies —
+   * the CLI injects an inquirer-based implementation.
+   */
+  toolSelector?: (tools: MCPTool[]) => Promise<MCPTool[]>;
 }
 
 export class MCPBinder {
@@ -20,20 +27,26 @@ export class MCPBinder {
     serverUrl: string,
     options: BindingOptions = {}
   ): Promise<{ bindings: BindingsServer; guardrails: GuardrailsApproval[] }> {
-    
+
     // Discover tools
     const tools = await client.listTools();
     const resources = await client.listResources();
     const prompts = await client.listPrompts();
-    
+
     // Get fingerprint for trust
     const fingerprint = await client.getFingerprint();
-    
-    // Select tools (in interactive mode, user would select)
-    const selectedTools = options.interactive
-      ? await this.interactiveToolSelection(tools)
-      : tools; // Auto-select all in non-interactive mode
-    
+
+    // Select tools
+    let selectedTools: MCPTool[];
+    if (options.interactive && options.toolSelector) {
+      selectedTools = await options.toolSelector(tools);
+    } else if (options.interactive) {
+      // Fallback: select all when no selector provided
+      selectedTools = tools;
+    } else {
+      selectedTools = tools;
+    }
+
     // Create bindings
     const bindingsServer: BindingsServer = {
       name: serverName,
@@ -50,40 +63,40 @@ export class MCPBinder {
       })),
       last_bind_at: new Date().toISOString(),
     };
-    
+
     // Generate guardrails from MCP metadata
     const guardrails = this.generateGuardrailsFromMetadata(
       selectedTools,
       serverName,
       options
     );
-    
+
     return { bindings: bindingsServer, guardrails };
   }
-  
+
   private createToolBinding(tool: MCPTool): BindingsTool {
     const riskHints: string[] = [];
-    
+
     if (tool.annotations?.destructive) {
       riskHints.push('destructive');
     }
     if (tool.annotations?.risk) {
       riskHints.push(tool.annotations.risk);
     }
-    
+
     return {
       tool_ref: tool.name,
       risk_hints: riskHints.length > 0 ? riskHints : undefined,
     };
   }
-  
+
   private generateGuardrailsFromMetadata(
     tools: MCPTool[],
     serverName: string,
     options: BindingOptions
   ): GuardrailsApproval[] {
     const guardrails: GuardrailsApproval[] = [];
-    
+
     for (const tool of tools) {
       // Auto-generate approval rules based on MCP annotations
       if (tool.annotations?.destructive) {
@@ -110,13 +123,7 @@ export class MCPBinder {
         });
       }
     }
-    
+
     return guardrails;
-  }
-  
-  private async interactiveToolSelection(tools: MCPTool[]): Promise<MCPTool[]> {
-    // TODO: Implement interactive selection using inquirer
-    // For now, return all tools
-    return tools;
   }
 }

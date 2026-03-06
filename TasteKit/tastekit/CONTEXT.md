@@ -1209,7 +1209,7 @@ tastekit sync
 
 ### Community
 
-- GitHub: github.com/yourusername/tastekit
+- GitHub: github.com/tastekit/tastekit
 - Discord: discord.gg/tastekit
 - Twitter: @tastekit_dev
 - Website: tastekit.dev

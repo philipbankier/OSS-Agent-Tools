@@ -16,7 +16,7 @@ The TasteKit team takes security bugs seriously. We appreciate your efforts to r
 
 **Please do not report security vulnerabilities through public GitHub issues.**
 
-Instead, please report them via email to: **security@tastekit.dev** (or your preferred security contact)
+Instead, please report them via email to: **security@tastekit.dev**
 
 You should receive a response within 48 hours. If for some reason you do not, please follow up via email to ensure we received your original message.
 

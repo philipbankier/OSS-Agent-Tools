@@ -120,6 +120,8 @@ export class Interviewer {
 
     // If starting fresh, get the LLM's opening message
     if (this.state.transcript.length === 0) {
+      // Anthropic API requires at least one user message; add a kickoff message
+      this.conversationHistory.push({ role: 'user', content: 'Please begin the interview.' });
       const opening = await this.getInterviewerResponse();
       const { message, coverageUpdates } = this.parseResponse(opening);
       this.addTurn('interviewer', message);

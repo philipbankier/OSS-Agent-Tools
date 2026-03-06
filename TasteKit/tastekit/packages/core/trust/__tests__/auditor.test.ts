@@ -74,4 +74,85 @@ describe('TrustAuditor', () => {
     expect(warnReport.passed).toBe(true);
     expect(warnReport.violations[0].severity).toBe('warning');
   });
+
+  // ─── new_tool detection ───
+
+  it('detects new tools when baseline is provided', () => {
+    const auditor = new TrustAuditor();
+    const previousBindings: BindingsV1 = {
+      schema_version: 'bindings.v1',
+      servers: [
+        {
+          name: 'local',
+          url: 'https://mcp.local',
+          pinned_fingerprint: 'fp-good',
+          tools: [{ tool_ref: 'read_file' }],
+          last_bind_at: '2026-01-01T00:00:00.000Z',
+        },
+      ],
+    };
+
+    const currentBindings: BindingsV1 = {
+      schema_version: 'bindings.v1',
+      servers: [
+        {
+          name: 'local',
+          url: 'https://mcp.local',
+          pinned_fingerprint: 'fp-good',
+          tools: [
+            { tool_ref: 'read_file' },
+            { tool_ref: 'write_file', risk_hints: ['destructive'] },
+          ],
+          last_bind_at: '2026-01-02T00:00:00.000Z',
+        },
+      ],
+    };
+
+    const report = auditor.audit(trust('strict'), currentBindings, previousBindings);
+    const newToolViolation = report.violations.find(v => v.type === 'new_tool');
+    expect(newToolViolation).toBeDefined();
+    expect(newToolViolation!.message).toContain('write_file');
+    expect(newToolViolation!.severity).toBe('warning');
+    expect(report.passed).toBe(true); // new_tool is warning, not error
+  });
+
+  it('no new_tool violations when tools are unchanged', () => {
+    const auditor = new TrustAuditor();
+    const b: BindingsV1 = {
+      schema_version: 'bindings.v1',
+      servers: [
+        {
+          name: 'local',
+          url: 'https://mcp.local',
+          pinned_fingerprint: 'fp-good',
+          tools: [{ tool_ref: 'read_file' }],
+          last_bind_at: '2026-01-01T00:00:00.000Z',
+        },
+      ],
+    };
+
+    const report = auditor.audit(trust('strict'), b, b);
+    const newToolViolations = report.violations.filter(v => v.type === 'new_tool');
+    expect(newToolViolations).toHaveLength(0);
+  });
+
+  it('skips new_tool check when no baseline provided', () => {
+    const auditor = new TrustAuditor();
+    const b: BindingsV1 = {
+      schema_version: 'bindings.v1',
+      servers: [
+        {
+          name: 'local',
+          url: 'https://mcp.local',
+          pinned_fingerprint: 'fp-good',
+          tools: [{ tool_ref: 'read_file' }, { tool_ref: 'write_file' }],
+          last_bind_at: '2026-01-01T00:00:00.000Z',
+        },
+      ],
+    };
+
+    const report = auditor.audit(trust('strict'), b);
+    const newToolViolations = report.violations.filter(v => v.type === 'new_tool');
+    expect(newToolViolations).toHaveLength(0);
+  });
 });

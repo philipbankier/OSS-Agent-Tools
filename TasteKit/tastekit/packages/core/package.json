@@ -1,8 +1,23 @@
 {
   "name": "@tastekit/core",
-  "version": "0.5.0",
+  "version": "1.0.0",
   "description": "TasteKit core library - schemas, compiler, skills, MCP, trust, tracing",
   "type": "module",
+  "license": "MIT",
+  "author": "TasteKit Contributors",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tastekit/tastekit.git",
+    "directory": "packages/core"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -26,6 +41,7 @@
     "test": "vitest run",
     "test:unit": "vitest run",
     "test:watch": "vitest",
+    "lint": "eslint --ignore-pattern dist/ --ignore-pattern __tests__/ .",
     "clean": "rm -rf dist"
   },
   "dependencies": {

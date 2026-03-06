@@ -163,10 +163,9 @@ for shell in bash zsh fish; do
   "${CLI[@]}" completion "$shell" >/dev/null
 done
 
-SIM_WS="$TMP_ROOT/simulate-workspace"
-mkdir -p "$SIM_WS"
-if "${CLI[@]}" simulate >/dev/null 2>&1; then
-  echo "simulate command unexpectedly succeeded" >&2
+# simulate exits cleanly with a "planned for v1.1" message (no error)
+if ! "${CLI[@]}" simulate 2>&1 | grep -q "planned for TasteKit v1.1"; then
+  echo "simulate command did not show expected v1.1 message" >&2
   exit 1
 fi
 

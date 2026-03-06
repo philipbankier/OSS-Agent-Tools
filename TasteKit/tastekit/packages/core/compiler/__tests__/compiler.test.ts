@@ -103,7 +103,7 @@ describe('compileGuardrails', () => {
     expect(result.success).toBe(true);
   });
 
-  it('adds approve_all_writes for low autonomy (< 0.4)', () => {
+  it('adds approve_all_writes for low autonomy (< 0.3)', () => {
     const session = makeSession({
       answers: { tradeoffs: { autonomy_level: 0.2 } },
     });
@@ -113,7 +113,18 @@ describe('compileGuardrails', () => {
     expect(writeRule!.action).toBe('require_approval');
   });
 
-  it('adds approve_destructive for medium autonomy (0.4-0.7)', () => {
+  it('adds approve_writes_and_deletes for low-medium autonomy (0.3-0.5)', () => {
+    const session = makeSession({
+      answers: { tradeoffs: { autonomy_level: 0.35 } },
+    });
+    const guardrails = compileGuardrails(session);
+    const writesDeletesRule = guardrails.approvals.find(a => a.rule_id === 'approve_writes_and_deletes');
+    expect(writesDeletesRule).toBeDefined();
+    const allWritesRule = guardrails.approvals.find(a => a.rule_id === 'approve_all_writes');
+    expect(allWritesRule).toBeUndefined();
+  });
+
+  it('adds approve_destructive for medium autonomy (0.5-0.7)', () => {
     const session = makeSession({
       answers: { tradeoffs: { autonomy_level: 0.5 } },
     });
@@ -186,8 +197,21 @@ describe('compileMemoryPolicy', () => {
     expect(corrections!.score).toBe(0.95);
   });
 
-  it('uses consolidate update mode', () => {
+  it('uses revise mode for low autonomy', () => {
     const session = makeSession();
+    const memory = compileMemoryPolicy(session);
+    // autonomy_level 0.3 → revise (conservative; consolidate requires >= 0.6)
+    expect(memory.write_policy.update_mode).toBe('revise');
+  });
+
+  it('uses consolidate mode for high autonomy', () => {
+    const session = makeSession({
+      answers: {
+        goals: { primary_goal: 'Help with code', key_principles: 'Be fast' },
+        tone: { voice_keywords: ['casual'], forbidden_phrases: '' },
+        tradeoffs: { accuracy_vs_speed: 0.5, autonomy_level: 0.8 },
+      },
+    });
     const memory = compileMemoryPolicy(session);
     expect(memory.write_policy.update_mode).toBe('consolidate');
   });
