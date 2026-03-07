@@ -28,6 +28,9 @@ export const WorkspaceConfigSchema = z.object({
     last_compiled_at: z.string().datetime().optional(),
     artifacts_version: z.string().optional(),
   }).optional(),
+
+  /** Voice configuration — validated by @tastekit/voice at runtime */
+  voice: z.any().optional(),
 });
 
 /**

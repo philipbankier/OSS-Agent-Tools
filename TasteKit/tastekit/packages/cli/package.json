@@ -38,6 +38,9 @@
     "uuid": "^13.0.0",
     "yaml": "^2.8.2"
   },
+  "optionalDependencies": {
+    "@tastekit/voice": "workspace:*"
+  },
   "devDependencies": {
     "@types/inquirer": "^9.0.0",
     "@types/node": "^22.0.0",

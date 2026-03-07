@@ -16,6 +16,7 @@ interface OnboardOptions {
   depth?: 'quick' | 'guided' | 'operator';
   resume?: boolean;
   provider?: string;
+  voice?: boolean;
 }
 
 export function resolveOnboardProviderConfig(
@@ -47,6 +48,7 @@ export const onboardCommand = new Command('onboard')
   .addOption(createOption('--depth <type>', 'Override depth').choices(['quick', 'guided', 'operator']))
   .option('--resume', 'Resume from previous session')
   .option('--provider <name>', 'Override LLM provider: anthropic, openai, ollama')
+  .option('--voice', 'Enable voice mode (requires @tastekit/voice and sox)')
   .action(async (options: OnboardOptions) => {
     const workspacePath = join(process.cwd(), '.tastekit');
     const configPath = join(workspacePath, 'tastekit.yaml');
@@ -75,6 +77,7 @@ export const onboardCommand = new Command('onboard')
 
     // Resolve LLM provider
     const spinner = ora('Connecting to LLM...').start();
+    let voiceIO: { getUserInput(): Promise<string>; onInterviewerMessage(msg: string): Promise<void>; dispose(): Promise<void> } | null = null;
     try {
       const providerConfig = resolveOnboardProviderConfig(config.llm_provider, options.provider)
         ?? await autoDetectProvider();
@@ -111,9 +114,26 @@ export const onboardCommand = new Command('onboard')
       session.domain_id = domainId;
       session.llm_provider = { name: llm.name };
 
+      // Set up voice mode if requested
+      if (options.voice) {
+        try {
+          const { createVoiceIO } = await import('@tastekit/voice');
+          voiceIO = await createVoiceIO((config as Record<string, unknown>).voice);
+          console.log(chalk.green('Voice mode enabled. Speak into your microphone.'));
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.warn(chalk.yellow(`Voice mode unavailable: ${msg}`));
+          console.warn(chalk.yellow('Falling back to text input.\n'));
+        }
+      }
+
       console.log(chalk.bold.cyan('\nTasteKit Onboarding Interview\n'));
-      console.log(chalk.gray(`Domain: ${domainId} | Depth: ${depth} | LLM: ${llm.name}`));
-      console.log(chalk.gray('Type /save to save and quit, /skip to skip a topic\n'));
+      console.log(chalk.gray(`Domain: ${domainId} | Depth: ${depth} | LLM: ${llm.name}${voiceIO ? ' | Voice: ON' : ''}`));
+      if (!voiceIO) {
+        console.log(chalk.gray('Type /save to save and quit, /skip to skip a topic\n'));
+      } else {
+        console.log(chalk.gray('Say "save" to save and quit, "skip" to skip a topic\n'));
+      }
 
       // Run interviewer
       const interviewer = new Interviewer({
@@ -121,18 +141,36 @@ export const onboardCommand = new Command('onboard')
         rubric,
         depth,
         resumeFrom: resumeState,
-        onInterviewerMessage: (msg) => {
-          console.log(chalk.cyan('\n  ') + msg + '\n');
-        },
-        getUserInput: async () => {
-          const { answer } = await inquirer.prompt([{
-            type: 'input',
-            name: 'answer',
-            message: chalk.green('You:'),
-            validate: (input: string) => input.length > 0 || 'Please type a response (or /save to save and quit)',
-          }]);
-          return answer;
-        },
+        onInterviewerMessage: voiceIO
+          ? (msg) => voiceIO!.onInterviewerMessage(msg)
+          : (msg) => {
+            console.log(chalk.cyan('\n  ') + msg + '\n');
+          },
+        getUserInput: voiceIO
+          ? async () => {
+            try {
+              return await voiceIO!.getUserInput();
+            } catch {
+              // Turn-level fallback to text input
+              console.warn(chalk.yellow('  Voice input failed. Type your response:'));
+              const { answer } = await inquirer.prompt([{
+                type: 'input',
+                name: 'answer',
+                message: chalk.green('You:'),
+                validate: (input: string) => input.length > 0 || 'Please type a response',
+              }]);
+              return answer;
+            }
+          }
+          : async () => {
+            const { answer } = await inquirer.prompt([{
+              type: 'input',
+              name: 'answer',
+              message: chalk.green('You:'),
+              validate: (input: string) => input.length > 0 || 'Please type a response (or /save to save and quit)',
+            }]);
+            return answer;
+          },
         onStateChange: (state) => {
           session.interview = state;
           session.current_step = 'interview';
@@ -162,7 +200,13 @@ export const onboardCommand = new Command('onboard')
       console.log('');
       hint('tastekit compile', 'generate your taste artifacts');
 
+      // Clean up voice resources
+      if (voiceIO) {
+        await voiceIO.dispose();
+      }
+
     } catch (error) {
+      if (voiceIO) await voiceIO.dispose().catch(() => {});
       handleError(error, spinner);
     }
   });

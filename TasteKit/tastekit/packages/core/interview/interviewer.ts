@@ -51,8 +51,8 @@ export interface InterviewerOptions {
   llm: LLMProvider;
   rubric: DomainRubric;
   depth: 'quick' | 'guided' | 'operator';
-  /** Callback for each interviewer message */
-  onInterviewerMessage: (message: string) => void;
+  /** Callback for each interviewer message (async supported for voice TTS playback) */
+  onInterviewerMessage: (message: string) => void | Promise<void>;
   /** Callback to get user input */
   getUserInput: () => Promise<string>;
   /** Resume from saved state */
@@ -126,7 +126,7 @@ export class Interviewer {
       const { message, coverageUpdates } = this.parseResponse(opening);
       this.addTurn('interviewer', message);
       this.applyCoverageUpdates(coverageUpdates);
-      this.options.onInterviewerMessage(message);
+      await this.options.onInterviewerMessage(message);
       this.options.onStateChange?.(this.state);
     }
 
@@ -137,7 +137,7 @@ export class Interviewer {
       // Handle special commands
       if (userInput.toLowerCase().trim() === '/save') {
         this.options.onStateChange?.(this.state);
-        this.options.onInterviewerMessage('Session saved. Run with --resume to continue later.');
+        await this.options.onInterviewerMessage('Session saved. Run with --resume to continue later.');
         break;
       }
 
@@ -156,7 +156,7 @@ export class Interviewer {
       this.addTurn('interviewer', message);
       this.conversationHistory.push({ role: 'assistant', content: rawResponse });
       this.applyCoverageUpdates(coverageUpdates);
-      this.options.onInterviewerMessage(message);
+      await this.options.onInterviewerMessage(message);
       this.options.onStateChange?.(this.state);
 
       if (shouldComplete || this.allDimensionsCovered()) {
