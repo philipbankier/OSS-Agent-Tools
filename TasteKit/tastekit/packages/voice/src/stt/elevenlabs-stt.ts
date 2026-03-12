@@ -35,8 +35,7 @@ export class ElevenLabsSTT implements STTProvider {
   async *transcribe(audio: AsyncIterable<Buffer>): AsyncIterable<TranscriptEvent> {
     const { apiKey, language, vadSilenceThreshold, baseUrl, sampleRate } = this.options;
 
-    const audioFormat = `pcm_${sampleRate}`;
-    const url = `${baseUrl}/v1/speech-to-text/realtime?model_id=scribe_v2&audio_format=${audioFormat}&language_code=${language}&commit_strategy=vad&vad_silence_threshold_secs=${vadSilenceThreshold}`;
+    const url = `${baseUrl}/v1/speech-to-text/realtime?model_id=scribe_v2_realtime&language_code=${language}&audio_format=pcm_${sampleRate}`;
 
     const ws = new WebSocket(url, {
       headers: { 'xi-api-key': apiKey },

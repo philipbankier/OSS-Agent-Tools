@@ -32,19 +32,18 @@ export class ElevenLabsTTS implements TTSProvider {
   async synthesize(text: string): Promise<AsyncIterable<Buffer>> {
     const { apiKey, voiceId, modelId, baseUrl } = this.options;
 
-    const url = `${baseUrl}/v1/text-to-speech/${voiceId}/stream`;
+    // output_format is a query parameter, not a body field
+    const url = `${baseUrl}/v1/text-to-speech/${voiceId}/stream?output_format=pcm_22050`;
 
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'xi-api-key': apiKey,
-        Accept: 'audio/pcm',
       },
       body: JSON.stringify({
         text,
         model_id: modelId,
-        output_format: 'pcm_22050',
         voice_settings: {
           stability: 0.5,
           similarity_boost: 0.75,
